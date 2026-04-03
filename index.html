@@ -319,7 +319,56 @@
             display: block;
             margin-top: 2px;
         }
-        
+
+        /* 諮詢備註 */
+        .member-notes-info {
+            margin-top: var(--spacing-md);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--blue-light);
+            border-radius: var(--radius-sm);
+            border-left: 4px solid var(--blue);
+        }
+        .member-notes-info label {
+            color: var(--blue-dark);
+            font-size: 12px;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .member-notes-info span {
+            color: var(--gray-dark);
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        /* 最新 MOTI 照片預覽 */
+        .member-moti-preview {
+            margin-top: var(--spacing-md);
+        }
+        .member-moti-preview > label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--green-dark);
+            display: block;
+            margin-bottom: 8px;
+        }
+        .moti-preview-images {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+        }
+        .moti-preview-images img {
+            width: 80px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: var(--radius-sm);
+            border: 2px solid var(--gray-light);
+            cursor: pointer;
+        }
+        .moti-preview-images img:hover {
+            border-color: var(--green);
+        }
+
         /* 課表紀錄方式選擇 */
         .record-method-hint {
             background: var(--yellow-light);
@@ -1379,6 +1428,16 @@
                     <label>⚠️ 疾病史注意</label>
                     <span id="memberDisease">-</span>
                 </div>
+                <div class="member-notes-info" id="memberNotesInfo" style="display: none;">
+                    <label>📝 諮詢備註</label>
+                    <span id="memberNotes">-</span>
+                </div>
+
+                <!-- 最新 MOTI 照片 -->
+                <div class="member-moti-preview" id="memberMotiPreview" style="display: none;">
+                    <label>📊 最新 MOTI 體態照片</label>
+                    <div class="moti-preview-images" id="motiPreviewImages"></div>
+                </div>
 
                 <!-- MOTI 檢測歷程按鈕 -->
                 <button type="button" class="moti-history-btn" onclick="openMotiModal()" style="display: none;" id="motiHistoryBtn">
@@ -1931,11 +1990,23 @@
             } else {
                 diseaseAlert.style.display = 'none';
             }
-            
+
+            // 諮詢備註
+            const notesInfo = document.getElementById('memberNotesInfo');
+            if (member.notes && member.notes.trim()) {
+                document.getElementById('memberNotes').textContent = member.notes;
+                notesInfo.style.display = 'block';
+            } else {
+                notesInfo.style.display = 'none';
+            }
+
             document.getElementById('memberInfoCard').classList.add('show');
 
             // 顯示 MOTI 按鈕
             document.getElementById('motiHistoryBtn').style.display = 'flex';
+
+            // 載入最新 MOTI 照片
+            loadMotiPreview(member.id);
 
             // 清空照片
             photoFiles = [];
@@ -1954,6 +2025,8 @@
             selectedMember = null;
             document.getElementById('memberInfoCard').classList.remove('show');
             document.getElementById('motiHistoryBtn').style.display = 'none';
+            document.getElementById('memberNotesInfo').style.display = 'none';
+            document.getElementById('memberMotiPreview').style.display = 'none';
             document.getElementById('memberSearch').focus();
         }
 
@@ -2004,6 +2077,33 @@
                 closeMotiModal();
             }
         });
+
+        // ============================================
+        // 選擇學員時載入最新 MOTI 照片預覽
+        // ============================================
+        async function loadMotiPreview(memberId) {
+            const previewDiv = document.getElementById('memberMotiPreview');
+            const imagesDiv = document.getElementById('motiPreviewImages');
+            previewDiv.style.display = 'none';
+            imagesDiv.innerHTML = '';
+
+            try {
+                const result = await callMotiEdge('getPhotos', { memberId });
+                if (result.success && result.data && result.data.length > 0) {
+                    // 取最新一筆有照片的記錄
+                    const latest = result.data[0];
+                    const photos = [latest.front_photo, latest.side_photo, latest.back_photo].filter(p => p && p.trim());
+                    if (photos.length > 0) {
+                        imagesDiv.innerHTML = photos.map(url =>
+                            `<img src="${url}?tr=w-160,h-200,f-jpg" alt="MOTI" onclick="openLightbox('${url}')">`
+                        ).join('');
+                        previewDiv.style.display = 'block';
+                    }
+                }
+            } catch (e) {
+                console.log('MOTI 預覽載入失敗:', e.message);
+            }
+        }
 
         // ============================================
         // MOTI 歷程
@@ -2448,7 +2548,7 @@
             document.getElementById('classHistoryTimelineContent').innerHTML = '';
 
             try {
-                const result = await callEdge('getClassHistory', { memberId });
+                const result = await callEdge('getClassRecords', { targetType: 'member', targetId: memberId });
                 document.getElementById('classHistoryLoading').style.display = 'none';
 
                 if (result.data && result.data.length > 0) {
@@ -2869,13 +2969,13 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(formData)
                     });
-                    const result = await response.json();
-                    
-                    if (result.success) {
+
+                    // Make.com webhook 回傳 "Accepted" 文字（非 JSON），status 2xx 即成功
+                    if (response.ok) {
                         showToast('✅ 紀錄已送出', 'success');
                         setTimeout(() => resetForm(), 1500);
                     } else {
-                        throw new Error(result.message || '送出失敗');
+                        throw new Error('送出失敗: HTTP ' + response.status);
                     }
                 }
             } catch (error) {
