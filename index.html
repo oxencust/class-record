@@ -416,7 +416,40 @@
         }
         .photo-btn.upload { border-color: var(--blue); }
         .photo-btn.camera { border-color: var(--pink); }
-        
+
+        /* 上課日期時段 */
+        .date-time-row {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+        .date-time-row .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        .time-slot-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .time-slot-btn {
+            padding: 10px 4px;
+            border: 2px solid var(--gray-light);
+            border-radius: var(--radius-sm);
+            background: var(--white);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            text-align: center;
+            color: var(--gray-dark);
+            transition: all 0.2s;
+        }
+        .time-slot-btn:hover { border-color: var(--green); background: var(--green-light); }
+        .time-slot-btn.active {
+            border-color: var(--green);
+            background: var(--green);
+            color: var(--white);
+        }
+
         /* 星星評分 */
         .star-rating {
             display: flex;
@@ -643,6 +676,39 @@
             </div>
         </section>
         
+        <!-- 上課日期時段 -->
+        <section class="card" id="dateTimeSection">
+            <div class="card-header">
+                <div class="card-icon blue">📅</div>
+                <div class="card-title">上課日期與時段</div>
+            </div>
+            <div class="date-time-row">
+                <div class="form-group">
+                    <label class="form-label">上課日期<span class="required">*</span></label>
+                    <input type="date" class="form-input" id="classDate">
+                </div>
+            </div>
+            <div class="form-group" style="margin-top: 12px;">
+                <label class="form-label">上課時段<span class="required">*</span></label>
+                <div class="time-slot-grid" id="timeSlotGrid">
+                    <button type="button" class="time-slot-btn" data-slot="08:00-09:00" onclick="selectTimeSlot(this)">08:00-09:00</button>
+                    <button type="button" class="time-slot-btn" data-slot="09:00-10:00" onclick="selectTimeSlot(this)">09:00-10:00</button>
+                    <button type="button" class="time-slot-btn" data-slot="10:00-11:00" onclick="selectTimeSlot(this)">10:00-11:00</button>
+                    <button type="button" class="time-slot-btn" data-slot="11:00-12:00" onclick="selectTimeSlot(this)">11:00-12:00</button>
+                    <button type="button" class="time-slot-btn" data-slot="12:00-13:00" onclick="selectTimeSlot(this)">12:00-13:00</button>
+                    <button type="button" class="time-slot-btn" data-slot="13:00-14:00" onclick="selectTimeSlot(this)">13:00-14:00</button>
+                    <button type="button" class="time-slot-btn" data-slot="14:00-15:00" onclick="selectTimeSlot(this)">14:00-15:00</button>
+                    <button type="button" class="time-slot-btn" data-slot="15:00-16:00" onclick="selectTimeSlot(this)">15:00-16:00</button>
+                    <button type="button" class="time-slot-btn" data-slot="16:00-17:00" onclick="selectTimeSlot(this)">16:00-17:00</button>
+                    <button type="button" class="time-slot-btn" data-slot="17:00-18:00" onclick="selectTimeSlot(this)">17:00-18:00</button>
+                    <button type="button" class="time-slot-btn" data-slot="18:00-19:00" onclick="selectTimeSlot(this)">18:00-19:00</button>
+                    <button type="button" class="time-slot-btn" data-slot="19:00-20:00" onclick="selectTimeSlot(this)">19:00-20:00</button>
+                    <button type="button" class="time-slot-btn" data-slot="20:00-21:00" onclick="selectTimeSlot(this)">20:00-21:00</button>
+                    <button type="button" class="time-slot-btn" data-slot="21:00-22:00" onclick="selectTimeSlot(this)">21:00-22:00</button>
+                </div>
+            </div>
+        </section>
+
         <!-- 課表紀錄 -->
         <section class="card" id="recordSection">
             <div class="card-header">
@@ -805,8 +871,28 @@
         // ============================================
         let currentCoach = null;
         let selectedMember = null;
+        let selectedTimeSlot = '';
         let photoFiles = [];
         let uploadedPhotoUrls = [];
+
+        // 預設今天日期
+        (function initDate() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            setTimeout(() => {
+                const el = document.getElementById('classDate');
+                if (el) el.value = yyyy + '-' + mm + '-' + dd;
+            }, 100);
+        })();
+
+        // 時段選擇
+        function selectTimeSlot(btn) {
+            document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedTimeSlot = btn.getAttribute('data-slot');
+        }
         let mentalStateValue = 0;
         let searchTimeout = null;
         
@@ -1010,12 +1096,12 @@
             document.getElementById('memberName').textContent = member.name;
             document.getElementById('memberGender').textContent = 
                 (member.gender === 'male' || member.gender === '男') ? '男' : '女';
-            document.getElementById('memberBirthday').textContent = member.birthday || '-';
-            
+            document.getElementById('memberBirthday').textContent = member.birth_date || '-';
+
             // 疾病史
             const diseaseAlert = document.getElementById('memberDiseaseAlert');
-            if (member.disease_history) {
-                document.getElementById('memberDisease').textContent = member.disease_history;
+            if (member.medical_history) {
+                document.getElementById('memberDisease').textContent = member.medical_history;
                 diseaseAlert.style.display = 'block';
             } else {
                 diseaseAlert.style.display = 'none';
@@ -1125,10 +1211,21 @@
                 showToast('請選擇學員', 'error');
                 return false;
             }
-            
+
+            const classDate = document.getElementById('classDate').value;
+            if (!classDate) {
+                showToast('請選擇上課日期', 'error');
+                return false;
+            }
+
+            if (!selectedTimeSlot) {
+                showToast('請選擇上課時段', 'error');
+                return false;
+            }
+
             const hasPhotos = photoFiles.length > 0;
             const hasText = document.getElementById('trainingContent').value.trim().length > 0;
-            
+
             if (!hasPhotos && !hasText) {
                 showToast('請至少填寫照片或文字描述', 'error');
                 return false;
@@ -1197,8 +1294,8 @@
                     coachName: currentCoach.name,
                     memberId: selectedMember.id,
                     memberName: selectedMember.name,
-                    classDate: new Date().toISOString().split('T')[0],
-                    classTime: new Date().toTimeString().slice(0, 5),
+                    classDate: document.getElementById('classDate').value,
+                    classTime: selectedTimeSlot,
                     photos: uploadedPhotoUrls.join(','),
                     trainingContent: document.getElementById('trainingContent').value.trim(),
                     isLate: document.querySelector('input[name="isLate"]:checked').value === 'yes' ? 1 : 0,
@@ -1275,12 +1372,17 @@
         
         function resetForm() {
             selectedMember = null;
+            selectedTimeSlot = '';
             photoFiles = [];
             uploadedPhotoUrls = [];
             mentalStateValue = 0;
-            
+
             document.getElementById('memberInfoCard').classList.remove('show');
             document.getElementById('memberSearch').value = '';
+            // 重設日期為今天
+            var today = new Date();
+            document.getElementById('classDate').value = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+            document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('photoPreviewContainer').innerHTML = '';
             document.getElementById('trainingContent').value = '';
             document.getElementById('mentalState').value = '';
