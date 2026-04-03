@@ -1737,6 +1737,21 @@
         
         async function initLiff() {
             try {
+                // 先檢查 URL 參數（從入口系統帶入）
+                const urlParams = new URLSearchParams(window.location.search);
+                const paramCoachId = urlParams.get('coach_id');
+                const paramCoachName = urlParams.get('coach_name');
+
+                if (paramCoachId && paramCoachName) {
+                    currentCoach = {
+                        id: paramCoachId,
+                        name: decodeURIComponent(paramCoachName)
+                    };
+                    document.getElementById('coachBadge').textContent = currentCoach.name;
+                    return;
+                }
+
+                // 沒有 URL 參數時走 LIFF 流程
                 await liff.init({ liffId: CONFIG.LIFF_ID });
                 if (!liff.isLoggedIn()) {
                     liff.login();
@@ -2888,8 +2903,9 @@
                 formData.append('signature', authResult.signature);
                 formData.append('expire', String(authResult.expire));
                 formData.append('token', authResult.token);
-                formData.append('folder', '/class-records/');
-                formData.append('fileName', `${selectedMember.id}_${Date.now()}.jpg`);
+                const classDate = document.getElementById('classDate').value;
+                formData.append('folder', `/class/${selectedMember.id}_${selectedMember.name}/${classDate}/`);
+                formData.append('fileName', `${Date.now()}_${String(photoFiles.indexOf(file) + 1).padStart(3, '0')}.jpg`);
 
                 const uploadResponse = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
                     method: 'POST',
