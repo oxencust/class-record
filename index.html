@@ -72,6 +72,7 @@
         }
         .loading-logo span { font-size: 20px; font-weight: 700; color: var(--white); }
         @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .loading-text { color: var(--gray); font-size: 14px; }
         
         /* Header */
@@ -426,28 +427,733 @@
             flex: 1;
             margin-bottom: 0;
         }
-        .time-slot-grid {
+
+        /* MOTI/InBody 歷程按鈕 */
+        .moti-history-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md);
+            margin-top: var(--spacing-md);
+            background: linear-gradient(135deg, var(--blue-light), var(--green-light));
+            border: 1px solid var(--blue);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .moti-history-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(159, 204, 204, 0.4);
+        }
+
+        .moti-history-btn .moti-icon {
+            font-size: 20px;
+        }
+
+        .moti-history-btn span:nth-child(2) {
+            flex: 1;
+            text-align: left;
+            font-weight: 600;
+            color: var(--blue-dark);
+        }
+
+        .moti-history-btn .moti-arrow {
+            font-size: 20px;
+            color: var(--blue-dark);
+        }
+
+        /* 彈窗樣式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            padding: var(--spacing-md);
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-container {
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            transform: translateY(20px) scale(0.95);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-overlay.show .modal-container {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: linear-gradient(135deg, var(--blue), var(--green));
+            color: var(--white);
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: var(--white);
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-lg);
+        }
+
+        .modal-member-info {
+            text-align: center;
+            padding-bottom: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        .modal-member-info .name {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--gray-dark);
+        }
+
+        .modal-member-info .id {
+            font-size: 13px;
+            color: var(--gray);
+        }
+
+        /* 標籤切換 */
+        .modal-tabs {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .modal-tab {
+            flex: 1;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 2px solid var(--gray-light);
+            background: var(--white);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray);
+            transition: all 0.3s ease;
+        }
+
+        .modal-tab:hover {
+            border-color: var(--blue);
+            color: var(--blue-dark);
+        }
+
+        .modal-tab.active {
+            background: var(--blue);
+            border-color: var(--blue);
+            color: var(--white);
+        }
+
+        .modal-tab-content {
+            display: none;
+        }
+
+        .modal-tab-content.active {
+            display: block;
+        }
+
+        /* 課種篩選列 */
+        .class-filter-bar {
+            display: flex;
+            gap: 8px;
+            padding: 12px 0;
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--gray-light);
+            flex-wrap: wrap;
+        }
+
+        .class-filter-btn {
+            padding: 6px 12px;
+            border: 2px solid var(--gray-light);
+            border-radius: var(--radius-full);
+            background: var(--white);
+            color: var(--gray);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .class-filter-btn:hover {
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        .class-filter-btn.active {
+            background: var(--green);
+            border-color: var(--green);
+            color: var(--white);
+        }
+
+        /* 時間線載入與空狀態 */
+        .moti-timeline-loading, .moti-timeline-empty {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--gray);
+        }
+
+        .moti-timeline-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+        }
+
+        .moti-timeline-empty span {
+            font-size: 40px;
+            display: block;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .moti-timeline-empty p {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .spinner-small {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--gray-light);
+            border-top-color: var(--blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* 時間線樣式 */
+        .moti-timeline {
+            position: relative;
+            padding-left: 24px;
+        }
+
+        .moti-timeline::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 12px;
+            bottom: 12px;
+            width: 3px;
+            background: linear-gradient(to bottom, var(--green), var(--blue));
+            border-radius: 2px;
+        }
+
+        .moti-timeline-item {
+            position: relative;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .moti-timeline-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .moti-timeline-dot {
+            position: absolute;
+            left: -24px;
+            top: 14px;
+            width: 16px;
+            height: 16px;
+            background: var(--white);
+            border: 3px solid var(--blue);
+            border-radius: 50%;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+
+        .moti-timeline-item:first-child .moti-timeline-dot {
+            border-color: var(--green);
+            background: var(--green);
+        }
+
+        .moti-timeline-item.active .moti-timeline-dot {
+            transform: scale(1.2);
+            box-shadow: 0 0 0 4px rgba(159, 204, 204, 0.3);
+        }
+
+        .moti-timeline-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-md);
+            background: var(--gray-light);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .moti-timeline-header:hover {
+            background: var(--blue-light);
+        }
+
+        .moti-timeline-item.active .moti-timeline-header {
+            background: var(--blue-light);
+            border: 2px solid var(--blue);
+        }
+
+        .moti-timeline-item:first-child .moti-timeline-header:hover,
+        .moti-timeline-item:first-child.active .moti-timeline-header {
+            background: var(--green-light);
+            border-color: var(--green);
+        }
+
+        .moti-timeline-date {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .moti-timeline-date .date {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-dark);
+        }
+
+        .moti-timeline-date .badge {
+            font-size: 10px;
+            padding: 2px 8px;
+            background: var(--green);
+            color: var(--white);
+            border-radius: 10px;
+        }
+
+        .moti-timeline-summary {
+            font-size: 12px;
+            color: var(--gray);
+        }
+
+        .moti-timeline-arrow {
+            font-size: 16px;
+            color: var(--gray);
+            transition: transform 0.3s ease;
+        }
+
+        .moti-timeline-item.active .moti-timeline-arrow {
+            transform: rotate(90deg);
+        }
+
+        /* 詳細內容（展開式） */
+        .moti-timeline-detail {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+
+        .moti-timeline-item.active .moti-timeline-detail {
+            max-height: 3000px;
+        }
+
+        .moti-detail-content {
+            padding: var(--spacing-md);
+            margin-top: var(--spacing-sm);
+            background: var(--white);
+            border: 1px solid var(--gray-light);
+            border-radius: var(--radius-md);
+        }
+
+        /* MOTI 圖片 */
+        .moti-image-section {
+            margin-bottom: var(--spacing-md);
+            text-align: center;
+        }
+
+        .moti-album-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: var(--green);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-decoration: none;
+        }
+
+        .moti-album-btn:hover {
+            background: var(--green-dark);
+            color: white;
+        }
+
+        .moti-images-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 8px;
         }
-        .time-slot-btn {
-            padding: 10px 4px;
-            border: 2px solid var(--gray-light);
+
+        .moti-image-thumb {
+            aspect-ratio: 3/4;
             border-radius: var(--radius-sm);
-            background: var(--white);
+            overflow: hidden;
             cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            text-align: center;
-            color: var(--gray-dark);
-            transition: all 0.2s;
+            background: var(--gray-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--gray-light);
         }
-        .time-slot-btn:hover { border-color: var(--green); background: var(--green-light); }
-        .time-slot-btn.active {
-            border-color: var(--green);
-            background: var(--green);
-            color: var(--white);
+
+        .moti-image-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.2s;
+        }
+
+        .moti-image-thumb:hover img {
+            transform: scale(1.05);
+        }
+
+        .moti-image-thumb span {
+            font-size: 24px;
+            color: var(--gray);
+        }
+
+        .moti-image-container {
+            display: inline-block;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 2px solid var(--gray-light);
+            background: var(--gray-light);
+        }
+
+        .moti-image-container img {
+            display: block;
+            max-width: 100%;
+            max-height: 200px;
+            object-fit: contain;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .moti-image-container img:hover {
+            transform: scale(1.02);
+        }
+
+        /* InBody 圖片（報告通常較長） */
+        .moti-image-container.inbody img {
+            max-height: 280px;
+        }
+
+        /* 圖片放大 Overlay */
+        .image-lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .image-lightbox.show {
+            display: flex;
+        }
+
+        .image-lightbox img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: var(--radius-md);
+        }
+
+        .image-lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-lightbox-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .moti-image-placeholder {
+            width: 150px;
+            height: 180px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray);
+            font-size: 12px;
+        }
+
+        .moti-image-placeholder span {
+            font-size: 48px;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .moti-detail-section {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .moti-detail-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .moti-detail-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--blue-dark);
+            margin-bottom: var(--spacing-sm);
+            padding-bottom: var(--spacing-xs);
+            border-bottom: 1px dashed var(--gray-light);
+        }
+
+        .moti-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .moti-detail-item {
+            background: var(--gray-light);
+            padding: 10px;
+            border-radius: var(--radius-sm);
+            text-align: center;
+        }
+
+        .moti-detail-item label {
+            font-size: 10px;
+            color: var(--gray);
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .moti-detail-item span {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-dark);
+        }
+
+        .moti-detail-item.highlight {
+            background: var(--yellow-light);
+        }
+
+        .moti-detail-item.full-width {
+            grid-column: span 3;
+            text-align: left;
+        }
+
+        .moti-posture-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .moti-posture-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: var(--gray-light);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+        }
+
+        .moti-posture-item label {
+            color: var(--gray);
+        }
+
+        .moti-posture-item span {
+            font-weight: 600;
+            color: var(--gray-dark);
+        }
+
+        .moti-posture-item.warning span {
+            color: var(--pink-dark);
+        }
+
+        .moti-muscle-section {
+            margin-top: var(--spacing-sm);
+        }
+
+        .moti-muscle-label {
+            font-size: 11px;
+            color: var(--gray);
+            margin-bottom: 6px;
+        }
+
+        .moti-muscle-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .moti-muscle-tag {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .moti-muscle-tag.tight {
+            background: var(--pink-light);
+            color: var(--pink-dark);
+        }
+
+        .moti-muscle-tag.weak {
+            background: var(--yellow-light);
+            color: #b8860b;
+        }
+
+        .moti-notes {
+            padding: 10px 14px;
+            background: var(--blue-light);
+            border-left: 3px solid var(--blue);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            color: var(--gray-dark);
+        }
+
+        /* 骨骼檢測結果列表 */
+        .skeleton-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .skeleton-item {
+            display: flex;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--gray-light);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+        }
+
+        .skeleton-item label {
+            font-weight: 600;
+            color: var(--green-dark);
+            min-width: 70px;
+        }
+
+        .skeleton-item span {
+            color: var(--gray-dark);
+        }
+
+        .skeleton-note {
+            padding: 4px 12px 4px 78px;
+            font-size: 12px;
+            color: var(--blue-dark);
+            background: var(--blue-light);
+            border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+            margin-top: -2px;
+        }
+
+        /* 肌肉狀態列表 */
+        .muscle-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .muscle-item {
+            display: flex;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--pink-light);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+        }
+
+        .muscle-item .muscle-group {
+            font-weight: 600;
+            color: var(--pink-dark);
+            min-width: 50px;
+        }
+
+        .muscle-item .muscle-detail {
+            color: var(--gray-dark);
+        }
+
+        /* 其他建議列表 */
+        .other-suggest-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .suggest-item {
+            display: flex;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--blue-light);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+        }
+
+        .suggest-item label {
+            font-weight: 600;
+            color: var(--blue-dark);
+            min-width: 80px;
+        }
+
+        .suggest-item span {
+            color: var(--gray-dark);
         }
 
         /* 星星評分 */
@@ -673,9 +1379,89 @@
                     <label>⚠️ 疾病史注意</label>
                     <span id="memberDisease">-</span>
                 </div>
+
+                <!-- MOTI 檢測歷程按鈕 -->
+                <button type="button" class="moti-history-btn" onclick="openMotiModal()" style="display: none;" id="motiHistoryBtn">
+                    <span class="moti-icon">📊</span>
+                    <span>查看 MOTI / InBody 歷程</span>
+                    <span class="moti-arrow">›</span>
+                </button>
             </div>
         </section>
-        
+
+        <!-- MOTI 檢測歷程彈窗 -->
+        <div class="modal-overlay" id="motiModal">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3>📊 體態檢測歷程</h3>
+                    <button type="button" class="modal-close" onclick="closeMotiModal()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <!-- 會員資訊 -->
+                    <div class="modal-member-info" id="modalMemberInfo"></div>
+
+                    <!-- 標籤切換 -->
+                    <div class="modal-tabs">
+                        <button type="button" class="modal-tab active" data-tab="moti" onclick="switchModalTab('moti')">
+                            📊 MOTI 3D
+                        </button>
+                        <button type="button" class="modal-tab" data-tab="inbody" onclick="switchModalTab('inbody')">
+                            📏 InBody
+                        </button>
+                        <button type="button" class="modal-tab" data-tab="classHistory" onclick="switchModalTab('classHistory')">
+                            📋 課表紀錄
+                        </button>
+                    </div>
+
+                    <!-- MOTI 時間線 -->
+                    <div class="modal-tab-content active" id="motiTabContent">
+                        <div class="moti-timeline-loading" id="motiLoading">
+                            <div class="spinner-small"></div>
+                            <span>載入中...</span>
+                        </div>
+                        <div class="moti-timeline-empty" id="motiEmpty" style="display: none;">
+                            <span>📭</span>
+                            <p>尚無 MOTI 檢測記錄</p>
+                        </div>
+                        <div class="moti-timeline" id="motiTimelineContent"></div>
+                    </div>
+
+                    <!-- InBody 時間線 -->
+                    <div class="modal-tab-content" id="inbodyTabContent">
+                        <div class="moti-timeline-loading" id="inbodyLoading">
+                            <div class="spinner-small"></div>
+                            <span>載入中...</span>
+                        </div>
+                        <div class="moti-timeline-empty" id="inbodyEmpty" style="display: none;">
+                            <span>📭</span>
+                            <p>尚無 InBody 檢測記錄</p>
+                        </div>
+                        <div class="moti-timeline" id="inbodyTimelineContent"></div>
+                    </div>
+
+                    <!-- 課表紀錄時間線 -->
+                    <div class="modal-tab-content" id="classHistoryTabContent">
+                        <!-- 課種篩選 -->
+                        <div class="class-filter-bar">
+                            <button type="button" class="class-filter-btn active" data-filter="all" onclick="filterClassHistory('all')">全部</button>
+                            <button type="button" class="class-filter-btn" data-filter="strength_training" onclick="filterClassHistory('strength_training')">💪 重訓</button>
+                            <button type="button" class="class-filter-btn" data-filter="pilates" onclick="filterClassHistory('pilates')">🧘 皮拉提斯</button>
+                            <button type="button" class="class-filter-btn" data-filter="stretching" onclick="filterClassHistory('stretching')">🤸 伸展</button>
+                        </div>
+                        <div class="moti-timeline-loading" id="classHistoryLoading">
+                            <div class="spinner-small"></div>
+                            <span>載入中...</span>
+                        </div>
+                        <div class="moti-timeline-empty" id="classHistoryEmpty" style="display: none;">
+                            <span>📭</span>
+                            <p>尚無課表紀錄</p>
+                        </div>
+                        <div class="moti-timeline" id="classHistoryTimelineContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 上課日期時段 -->
         <section class="card" id="dateTimeSection">
             <div class="card-header">
@@ -687,24 +1473,9 @@
                     <label class="form-label">上課日期<span class="required">*</span></label>
                     <input type="date" class="form-input" id="classDate">
                 </div>
-            </div>
-            <div class="form-group" style="margin-top: 12px;">
-                <label class="form-label">上課時段<span class="required">*</span></label>
-                <div class="time-slot-grid" id="timeSlotGrid">
-                    <button type="button" class="time-slot-btn" data-slot="08:00-09:00" onclick="selectTimeSlot(this)">08:00-09:00</button>
-                    <button type="button" class="time-slot-btn" data-slot="09:00-10:00" onclick="selectTimeSlot(this)">09:00-10:00</button>
-                    <button type="button" class="time-slot-btn" data-slot="10:00-11:00" onclick="selectTimeSlot(this)">10:00-11:00</button>
-                    <button type="button" class="time-slot-btn" data-slot="11:00-12:00" onclick="selectTimeSlot(this)">11:00-12:00</button>
-                    <button type="button" class="time-slot-btn" data-slot="12:00-13:00" onclick="selectTimeSlot(this)">12:00-13:00</button>
-                    <button type="button" class="time-slot-btn" data-slot="13:00-14:00" onclick="selectTimeSlot(this)">13:00-14:00</button>
-                    <button type="button" class="time-slot-btn" data-slot="14:00-15:00" onclick="selectTimeSlot(this)">14:00-15:00</button>
-                    <button type="button" class="time-slot-btn" data-slot="15:00-16:00" onclick="selectTimeSlot(this)">15:00-16:00</button>
-                    <button type="button" class="time-slot-btn" data-slot="16:00-17:00" onclick="selectTimeSlot(this)">16:00-17:00</button>
-                    <button type="button" class="time-slot-btn" data-slot="17:00-18:00" onclick="selectTimeSlot(this)">17:00-18:00</button>
-                    <button type="button" class="time-slot-btn" data-slot="18:00-19:00" onclick="selectTimeSlot(this)">18:00-19:00</button>
-                    <button type="button" class="time-slot-btn" data-slot="19:00-20:00" onclick="selectTimeSlot(this)">19:00-20:00</button>
-                    <button type="button" class="time-slot-btn" data-slot="20:00-21:00" onclick="selectTimeSlot(this)">20:00-21:00</button>
-                    <button type="button" class="time-slot-btn" data-slot="21:00-22:00" onclick="selectTimeSlot(this)">21:00-22:00</button>
+                <div class="form-group">
+                    <label class="form-label">上課時間<span class="required">*</span></label>
+                    <input type="time" class="form-input" id="classTime">
                 </div>
             </div>
         </section>
@@ -871,31 +1642,70 @@
         // ============================================
         let currentCoach = null;
         let selectedMember = null;
-        let selectedTimeSlot = '';
         let photoFiles = [];
         let uploadedPhotoUrls = [];
 
-        // 預設今天日期
-        (function initDate() {
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
+        // 預設今天日期和現在時間
+        (function initDateTime() {
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mi = String(now.getMinutes()).padStart(2, '0');
             setTimeout(() => {
-                const el = document.getElementById('classDate');
-                if (el) el.value = yyyy + '-' + mm + '-' + dd;
+                var dateEl = document.getElementById('classDate');
+                var timeEl = document.getElementById('classTime');
+                if (dateEl) dateEl.value = yyyy + '-' + mm + '-' + dd;
+                if (timeEl) timeEl.value = hh + ':' + mi;
             }, 100);
         })();
-
-        // 時段選擇
-        function selectTimeSlot(btn) {
-            document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            selectedTimeSlot = btn.getAttribute('data-slot');
-        }
         let mentalStateValue = 0;
         let searchTimeout = null;
-        
+
+        // MOTI/InBody 相關變數
+        let motiHistoryData = [];
+        let inbodyHistoryData = [];
+        let classHistoryData = [];
+        let classHistoryLoaded = false;
+        let currentClassFilter = 'all';
+
+        // Moti API URL
+        const MOTI_API_URL = 'https://mnjilhpztnowaplggvkk.supabase.co/functions/v1/moti-api';
+
+        async function callMotiEdge(action, params = {}) {
+            const res = await fetch(MOTI_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, ...params })
+            });
+            if (!res.ok) throw new Error('MOTI API error: ' + res.status);
+            return res.json();
+        }
+
+        function openLightbox(imageSrc) {
+            if (!document.getElementById('imageLightbox')) {
+                const lightbox = document.createElement('div');
+                lightbox.id = 'imageLightbox';
+                lightbox.className = 'image-lightbox';
+                lightbox.innerHTML = `
+                    <img src="${imageSrc}" alt="預覽圖片">
+                    <button type="button" class="image-lightbox-close" onclick="closeLightbox()">✕</button>
+                `;
+                document.body.appendChild(lightbox);
+                lightbox.classList.add('show');
+            } else {
+                const lightbox = document.getElementById('imageLightbox');
+                lightbox.querySelector('img').src = imageSrc;
+                lightbox.classList.add('show');
+            }
+        }
+
+        function closeLightbox() {
+            const lightbox = document.getElementById('imageLightbox');
+            if (lightbox) lightbox.classList.remove('show');
+        }
+
         // ============================================
         // 初始化
         // ============================================
@@ -1108,7 +1918,10 @@
             }
             
             document.getElementById('memberInfoCard').classList.add('show');
-            
+
+            // 顯示 MOTI 按鈕
+            document.getElementById('motiHistoryBtn').style.display = 'flex';
+
             // 清空照片
             photoFiles = [];
             uploadedPhotoUrls = [];
@@ -1125,9 +1938,736 @@
         function clearSelectedMember() {
             selectedMember = null;
             document.getElementById('memberInfoCard').classList.remove('show');
+            document.getElementById('motiHistoryBtn').style.display = 'none';
             document.getElementById('memberSearch').focus();
         }
-        
+
+        // ============================================
+        // MOTI/InBody 歷程
+        // ============================================
+        function openMotiModal() {
+            if (!selectedMember) {
+                showToast('請先選擇學員', 'error');
+                return;
+            }
+
+            document.getElementById('motiModal').classList.add('show');
+
+            document.getElementById('modalMemberInfo').innerHTML = `
+                <div class="name">${selectedMember.name}</div>
+                <div class="id">會員編號：${selectedMember.id}</div>
+            `;
+
+            classHistoryLoaded = false;
+            currentClassFilter = 'all';
+            switchModalTab('moti');
+
+            loadMotiHistory(selectedMember.id);
+            loadInbodyHistory(selectedMember.id);
+        }
+
+        function closeMotiModal() {
+            document.getElementById('motiModal').classList.remove('show');
+        }
+
+        function switchModalTab(tab) {
+            document.querySelectorAll('.modal-tab').forEach(t => {
+                t.classList.toggle('active', t.dataset.tab === tab);
+            });
+
+            document.getElementById('motiTabContent').classList.toggle('active', tab === 'moti');
+            document.getElementById('inbodyTabContent').classList.toggle('active', tab === 'inbody');
+            document.getElementById('classHistoryTabContent').classList.toggle('active', tab === 'classHistory');
+
+            if (tab === 'classHistory' && selectedMember && !classHistoryLoaded) {
+                loadClassHistory(selectedMember.id);
+            }
+        }
+
+        document.getElementById('motiModal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeMotiModal();
+            }
+        });
+
+        // ============================================
+        // MOTI 歷程
+        // ============================================
+        async function loadMotiHistory(memberId) {
+            document.getElementById('motiLoading').style.display = 'flex';
+            document.getElementById('motiEmpty').style.display = 'none';
+            document.getElementById('motiTimelineContent').innerHTML = '';
+
+            try {
+                const result = await callMotiEdge('getAssessments', { memberId });
+                document.getElementById('motiLoading').style.display = 'none';
+
+                if (result.data && result.data.length > 0) {
+                    const validData = result.data.filter(item => {
+                        if (!item.id) return false;
+                        const date = item.assessment_date || item.date;
+                        if (!date || date === '' || date === '1970-01-01') return false;
+                        return true;
+                    });
+
+                    if (validData.length > 0) {
+                        motiHistoryData = validData;
+                        renderMotiTimeline(validData);
+                    } else {
+                        document.getElementById('motiEmpty').style.display = 'block';
+                    }
+                } else {
+                    document.getElementById('motiEmpty').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('查詢 MOTI 歷程失敗:', error);
+                document.getElementById('motiLoading').style.display = 'none';
+                document.getElementById('motiEmpty').style.display = 'block';
+            }
+        }
+
+        function renderMotiTimeline(data) {
+            const container = document.getElementById('motiTimelineContent');
+
+            const html = data.map((item, index) => {
+                const dateStr = item.assessment_date || item.date;
+                const date = new Date(dateStr);
+                const formattedDate = `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')}`;
+                const isLatest = index === 0;
+                const detailHtml = generateMotiDetailHtml(item);
+
+                const summaryText = item.risk_1 ?
+                    `${item.risk_1}${item.risk_2 ? '、' + item.risk_2 : ''}` :
+                    '點擊查看詳細';
+
+                return `
+                    <div class="moti-timeline-item" data-index="${index}">
+                        <div class="moti-timeline-dot"></div>
+                        <div class="moti-timeline-header" onclick="toggleMotiDetail(${index}, 'moti')">
+                            <div class="moti-timeline-date">
+                                <span class="date">${formattedDate}</span>
+                                ${isLatest ? '<span class="badge">最新</span>' : ''}
+                            </div>
+                            <div class="moti-timeline-summary">
+                                ${summaryText}
+                            </div>
+                            <span class="moti-timeline-arrow">›</span>
+                        </div>
+                        <div class="moti-timeline-detail">
+                            <div class="moti-detail-content">
+                                ${detailHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        function generateMotiDetailHtml(item) {
+            let imageHtml = '';
+            const albumUrl = `https://oxencust.github.io/moti-album/?id=${item.id}`;
+
+            if (item.imageUrl) {
+                const images = item.imageUrl.split(',').map(url => url.trim()).filter(url => url);
+                if (images.length > 0) {
+                    const firstImage = images[0];
+                    imageHtml = `
+                        <div class="moti-image-section">
+                            <div class="moti-image-container">
+                                <img src="${firstImage}" alt="MOTI 3D 體態圖" onclick="openLightbox('${firstImage}')" onerror="this.parentElement.innerHTML='<div class=\\'moti-image-placeholder\\'><span>🖼️</span>圖片載入失敗</div>'">
+                            </div>
+                            <a href="${albumUrl}" target="_blank" class="moti-album-btn">
+                                📷 查看全部照片 (${images.length}張)
+                            </a>
+                        </div>
+                    `;
+                } else {
+                    imageHtml = `
+                        <div class="moti-image-section">
+                            <a href="${albumUrl}" target="_blank" class="moti-album-btn">
+                                📷 查看相簿
+                            </a>
+                        </div>
+                    `;
+                }
+            } else {
+                imageHtml = `
+                    <div class="moti-image-section">
+                        <a href="${albumUrl}" target="_blank" class="moti-album-btn">
+                            📷 查看相簿
+                        </a>
+                    </div>
+                `;
+            }
+
+            const goalsHtml = item.goals ? `
+                <div class="moti-detail-section">
+                    <div class="moti-detail-title">🎯 期望目標</div>
+                    <div class="moti-notes">${item.goals}</div>
+                </div>
+            ` : '';
+
+            const shortTermGoalHtml = item.short_term_goal ? `
+                <div class="moti-detail-section">
+                    <div class="moti-detail-title">📌 短期目標</div>
+                    <div class="moti-notes">${item.short_term_goal}</div>
+                </div>
+            ` : '';
+
+            const diseaseHtml = item.diseases ? `
+                <div class="moti-detail-section">
+                    <div class="moti-detail-title">⚠️ 受傷/疾病史/手術紀錄</div>
+                    <div class="moti-notes" style="background: var(--pink-light); border-color: var(--pink);">
+                        ${item.diseases}
+                    </div>
+                </div>
+            ` : '';
+
+            let exerciseHtml = '';
+            if (item.exercise_experience) {
+                const expParts = [item.exercise_experience];
+                if (item.exercise_type) expParts.push(item.exercise_type);
+                if (item.exercise_duration) expParts.push(item.exercise_duration);
+                exerciseHtml = `
+                    <div class="moti-detail-section">
+                        <div class="moti-detail-title">🏃 過去運動經驗</div>
+                        <div class="moti-notes">${expParts.join(' ')}</div>
+                    </div>
+                `;
+            }
+
+            const risks = [item.risk_1, item.risk_2, item.risk_3].filter(r => r && r.trim());
+            const risksHtml = risks.length > 0 ? `
+                <div class="moti-detail-section">
+                    <div class="moti-detail-title">⚠️ 風險排名</div>
+                    <div class="moti-muscle-tags">
+                        ${risks.map((r, i) => `<span class="moti-muscle-tag tight">${i+1}. ${r}</span>`).join('')}
+                    </div>
+                </div>
+            ` : '';
+
+            let skeletonHtml = '';
+            const skeletonItems = [];
+
+            if (item.scoliosis) {
+                let html = `<div class="skeleton-item"><label>脊椎側彎</label><span>${item.scoliosis}</span></div>`;
+                if (item.note_scoliosis) html += `<div class="skeleton-note">備註: ${item.note_scoliosis}</div>`;
+                skeletonItems.push(html);
+            }
+
+            if (item.cervical_status) {
+                let html = `<div class="skeleton-item"><label>頸椎</label><span>${item.cervical_status}${item.cervical_degree ? ' ' + item.cervical_degree + '°' : ''}</span></div>`;
+                if (item.note_cervical) html += `<div class="skeleton-note">備註: ${item.note_cervical}</div>`;
+                skeletonItems.push(html);
+            }
+
+            const shoulderParts = [];
+            if (item.shrug) shoulderParts.push('聳肩:' + item.shrug);
+            if (item.round_shoulder) shoulderParts.push('圓肩:' + item.round_shoulder + (item.round_shoulder_degree ? ' ' + item.round_shoulder_degree + '°' : ''));
+            if (item.scapula) shoulderParts.push('肩胛:' + item.scapula);
+            if (item.humerus) shoulderParts.push('肱骨:' + item.humerus);
+            if (shoulderParts.length > 0) {
+                let html = `<div class="skeleton-item"><label>肩膀</label><span>${shoulderParts.join(' ')}</span></div>`;
+                if (item.note_shrug) html += `<div class="skeleton-note">聳肩備註: ${item.note_shrug}</div>`;
+                if (item.note_round_shoulder) html += `<div class="skeleton-note">圓肩備註: ${item.note_round_shoulder}</div>`;
+                if (item.note_scapula) html += `<div class="skeleton-note">肩胛備註: ${item.note_scapula}</div>`;
+                if (item.note_humerus) html += `<div class="skeleton-note">肱骨備註: ${item.note_humerus}</div>`;
+                skeletonItems.push(html);
+            }
+
+            if (item.thoracic_status) {
+                let html = `<div class="skeleton-item"><label>胸椎</label><span>${item.thoracic_status}${item.thoracic_degree ? ' ' + item.thoracic_degree + '°' : ''}</span></div>`;
+                if (item.note_thoracic) html += `<div class="skeleton-note">備註: ${item.note_thoracic}</div>`;
+                skeletonItems.push(html);
+            }
+
+            if (item.lumbar_status) {
+                let html = `<div class="skeleton-item"><label>腰椎</label><span>${item.lumbar_status}${item.lumbar_degree ? ' ' + item.lumbar_degree + '°' : ''}</span></div>`;
+                if (item.note_lumbar) html += `<div class="skeleton-note">備註: ${item.note_lumbar}</div>`;
+                skeletonItems.push(html);
+            }
+
+            const pelvisParts = [];
+            if (item.pelvis_tilt) pelvisParts.push('前後傾:' + item.pelvis_tilt + (item.pelvis_tilt_degree ? ' ' + item.pelvis_tilt_degree + '°' : ''));
+            if (item.pelvis_side) pelvisParts.push('左右:' + item.pelvis_side + (item.pelvis_side_degree ? ' ' + item.pelvis_side_degree + '°' : '') + (item.pelvis_up_down ? ' ' + item.pelvis_up_down : ''));
+            if (item.pelvis_rotation) pelvisParts.push('旋轉:' + item.pelvis_rotation + (item.pelvis_rotation_degree ? ' ' + item.pelvis_rotation_degree + '°' : ''));
+            if (item.functional_tilt) pelvisParts.push('功能性後傾:' + item.functional_tilt);
+            if (pelvisParts.length > 0) {
+                let html = `<div class="skeleton-item"><label>骨盆</label><span>${pelvisParts.join(' ')}</span></div>`;
+                if (item.note_pelvis_tilt) html += `<div class="skeleton-note">前後傾備註: ${item.note_pelvis_tilt}</div>`;
+                if (item.note_pelvis_side) html += `<div class="skeleton-note">左右備註: ${item.note_pelvis_side}</div>`;
+                if (item.note_pelvis_rotation) html += `<div class="skeleton-note">旋轉備註: ${item.note_pelvis_rotation}</div>`;
+                if (item.note_functional_tilt) html += `<div class="skeleton-note">功能性後傾備註: ${item.note_functional_tilt}</div>`;
+                skeletonItems.push(html);
+            }
+
+            if (item.left_knee || item.right_knee) {
+                let html = `<div class="skeleton-item"><label>膝蓋</label><span>左:${item.left_knee || '-'}${item.left_knee_degree ? ' ' + item.left_knee_degree + '°' : ''} 右:${item.right_knee || '-'}${item.right_knee_degree ? ' ' + item.right_knee_degree + '°' : ''}</span></div>`;
+                if (item.note_left_knee) html += `<div class="skeleton-note">左膝備註: ${item.note_left_knee}</div>`;
+                if (item.note_right_knee) html += `<div class="skeleton-note">右膝備註: ${item.note_right_knee}</div>`;
+                skeletonItems.push(html);
+            }
+
+            if (item.arch || item.foot_rotation) {
+                let html = `<div class="skeleton-item"><label>足</label><span>${item.arch || ''}${item.arch && item.foot_rotation ? ' ' : ''}${item.foot_rotation || ''}</span></div>`;
+                if (item.note_arch) html += `<div class="skeleton-note">足弓備註: ${item.note_arch}</div>`;
+                if (item.note_foot_rotation) html += `<div class="skeleton-note">足部旋轉備註: ${item.note_foot_rotation}</div>`;
+                skeletonItems.push(html);
+            }
+
+            const jointParts = [];
+            if (item.hip) jointParts.push('髖:' + item.hip);
+            if (item.knee_stability) jointParts.push('膝:' + item.knee_stability);
+            if (item.ankle_stability) jointParts.push('踝:' + item.ankle_stability);
+            if (jointParts.length > 0) {
+                let html = `<div class="skeleton-item"><label>關節狀態</label><span>${jointParts.join(' ')}</span></div>`;
+                if (item.note_hip) html += `<div class="skeleton-note">髖關節備註: ${item.note_hip}</div>`;
+                if (item.note_knee_stability) html += `<div class="skeleton-note">膝關節備註: ${item.note_knee_stability}</div>`;
+                if (item.note_ankle_stability) html += `<div class="skeleton-note">踝關節備註: ${item.note_ankle_stability}</div>`;
+                skeletonItems.push(html);
+            }
+
+            if (item.breathing_shallow || item.breathing_pattern) {
+                let html = `<div class="skeleton-item"><label>呼吸</label><span>${item.breathing_shallow || ''}${item.breathing_shallow && item.breathing_pattern ? ' ' : ''}${item.breathing_pattern || ''}</span></div>`;
+                if (item.note_breathing_shallow) html += `<div class="skeleton-note">呼吸短淺備註: ${item.note_breathing_shallow}</div>`;
+                if (item.note_breathing_pattern) html += `<div class="skeleton-note">呼吸模式備註: ${item.note_breathing_pattern}</div>`;
+                skeletonItems.push(html);
+            }
+
+            if (skeletonItems.length > 0) {
+                skeletonHtml = `
+                    <div class="moti-detail-section">
+                        <div class="moti-detail-title">🦴 檢測結果</div>
+                        <div class="skeleton-list">${skeletonItems.join('')}</div>
+                    </div>
+                `;
+            }
+
+            let muscleHtml = '';
+            const muscleItems = [];
+            const muscleGroups = [
+                { key: 'muscle_shoulder', name: '肩膀' },
+                { key: 'muscle_chest', name: '胸部' },
+                { key: 'muscle_back', name: '背部' },
+                { key: 'muscle_core', name: '核心' },
+                { key: 'muscle_glute', name: '臀部' },
+                { key: 'muscle_leg', name: '腿部' }
+            ];
+
+            muscleGroups.forEach(group => {
+                if (item[group.key] && item[group.key].trim()) {
+                    muscleItems.push(`<div class="muscle-item"><span class="muscle-group">${group.name}</span><span class="muscle-detail">${item[group.key]}</span></div>`);
+                }
+            });
+
+            if (muscleItems.length > 0) {
+                muscleHtml = `
+                    <div class="moti-detail-section">
+                        <div class="moti-detail-title">💪 肌肉狀態</div>
+                        <div class="muscle-list">${muscleItems.join('')}</div>
+                    </div>
+                `;
+            }
+
+            let coursesHtml = '';
+            if (item.total_courses || item.weight_training_courses || item.pilates_training_courses || item.stretch_courses) {
+                coursesHtml = `
+                    <div class="moti-detail-section">
+                        <div class="moti-detail-title">📋 建議訓練</div>
+                        <div class="moti-notes">總${item.total_courses || 0}堂 (重訓${item.weight_training_courses || 0}/皮拉提斯${item.pilates_training_courses || 0}/伸展${item.stretch_courses || 0})${item.course_order ? '<br>課程順序: ' + item.course_order : ''}</div>
+                    </div>
+                `;
+            }
+
+            const otherSuggestHtml = (item.functional_training || item.fascia_release) ? `
+                <div class="moti-detail-section">
+                    <div class="moti-detail-title">📝 其他建議</div>
+                    <div class="other-suggest-list">
+                        ${item.functional_training ? `<div class="suggest-item"><label>功能性訓練</label><span>${item.functional_training}</span></div>` : ''}
+                        ${item.fascia_release ? `<div class="suggest-item"><label>筋膜放鬆</label><span>${item.fascia_release}</span></div>` : ''}
+                    </div>
+                </div>
+            ` : '';
+
+            const precautionsHtml = item.precautions ? `
+                <div class="moti-detail-section">
+                    <div class="moti-detail-title">⚡ 特別注意</div>
+                    <div class="moti-notes" style="background: var(--pink-light); border-color: var(--pink);">${item.precautions}</div>
+                </div>
+            ` : '';
+
+            return `
+                ${imageHtml}
+                ${goalsHtml}
+                ${shortTermGoalHtml}
+                ${diseaseHtml}
+                ${exerciseHtml}
+                ${risksHtml}
+                ${skeletonHtml}
+                ${muscleHtml}
+                ${coursesHtml}
+                ${otherSuggestHtml}
+                ${precautionsHtml}
+            `;
+        }
+
+        function toggleMotiDetail(index, type) {
+            const container = type === 'moti' ?
+                document.getElementById('motiTimelineContent') :
+                document.getElementById('inbodyTimelineContent');
+
+            const items = container.querySelectorAll('.moti-timeline-item');
+            const targetItem = container.querySelector(`.moti-timeline-item[data-index="${index}"]`);
+
+            if (targetItem.classList.contains('active')) {
+                targetItem.classList.remove('active');
+            } else {
+                items.forEach(item => item.classList.remove('active'));
+                targetItem.classList.add('active');
+            }
+        }
+
+        // ============================================
+        // InBody 歷程
+        // ============================================
+        async function loadInbodyHistory(memberId) {
+            document.getElementById('inbodyLoading').style.display = 'flex';
+            document.getElementById('inbodyEmpty').style.display = 'none';
+            document.getElementById('inbodyTimelineContent').innerHTML = '';
+
+            try {
+                const result = await callMotiEdge('getAssessments', { memberId });
+                document.getElementById('inbodyLoading').style.display = 'none';
+
+                if (result.data && result.data.length > 0) {
+                    const inbodyData = result.data.filter(item => {
+                        if (!item.id) return false;
+                        const date = item.assessment_date || item.date;
+                        if (!date || date === '' || date === '1970-01-01') return false;
+                        if (!item.inbody_images) return false;
+                        return true;
+                    });
+
+                    if (inbodyData.length > 0) {
+                        inbodyHistoryData = inbodyData;
+                        renderInbodyTimeline(inbodyData);
+                    } else {
+                        document.getElementById('inbodyEmpty').style.display = 'block';
+                    }
+                } else {
+                    document.getElementById('inbodyEmpty').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('查詢 InBody 歷程失敗:', error);
+                document.getElementById('inbodyLoading').style.display = 'none';
+                document.getElementById('inbodyEmpty').style.display = 'block';
+            }
+        }
+
+        function renderInbodyTimeline(data) {
+            const container = document.getElementById('inbodyTimelineContent');
+
+            const html = data.map((item, index) => {
+                const dateStr = item.assessment_date || item.date;
+                const date = new Date(dateStr);
+                const formattedDate = `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')}`;
+                const isLatest = index === 0;
+                const detailHtml = generateInbodyDetailHtml(item);
+
+                return `
+                    <div class="moti-timeline-item" data-index="${index}">
+                        <div class="moti-timeline-dot"></div>
+                        <div class="moti-timeline-header" onclick="toggleMotiDetail(${index}, 'inbody')">
+                            <div class="moti-timeline-date">
+                                <span class="date">${formattedDate}</span>
+                                ${isLatest ? '<span class="badge">最新</span>' : ''}
+                            </div>
+                            <div class="moti-timeline-summary">
+                                點擊查看檢測報告
+                            </div>
+                            <span class="moti-timeline-arrow">›</span>
+                        </div>
+                        <div class="moti-timeline-detail">
+                            <div class="moti-detail-content">
+                                ${detailHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        function generateInbodyDetailHtml(item) {
+            if (item.inbody_images) {
+                return `
+                    <div class="moti-image-section" style="margin-bottom: 0;">
+                        <div class="moti-image-container inbody">
+                            <img src="${item.inbody_images}" alt="InBody 檢測報告" onclick="openLightbox('${item.inbody_images}')" onerror="this.parentElement.innerHTML='<div class=\\'moti-image-placeholder\\'><span>📄</span>圖片載入失敗</div>'">
+                        </div>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="moti-image-section" style="margin-bottom: 0;">
+                        <div class="moti-image-container inbody">
+                            <div class="moti-image-placeholder">
+                                <span>📄</span>
+                                無檢測報告圖片
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // ============================================
+        // 課表紀錄歷程
+        // ============================================
+        async function loadClassHistory(memberId) {
+            document.getElementById('classHistoryLoading').style.display = 'flex';
+            document.getElementById('classHistoryEmpty').style.display = 'none';
+            document.getElementById('classHistoryTimelineContent').innerHTML = '';
+
+            try {
+                const result = await callEdge('getClassHistory', { memberId });
+                document.getElementById('classHistoryLoading').style.display = 'none';
+
+                if (result.data && result.data.length > 0) {
+                    const validData = result.data.filter(item => {
+                        if (!item.id) return false;
+                        if (!item.class_date || item.class_date === '' || item.class_date === '1970-01-01') return false;
+                        return true;
+                    });
+
+                    if (validData.length > 0) {
+                        classHistoryData = validData;
+                        classHistoryLoaded = true;
+                        renderClassHistoryTimeline(validData);
+                    } else {
+                        document.getElementById('classHistoryEmpty').style.display = 'block';
+                    }
+                } else {
+                    document.getElementById('classHistoryEmpty').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('查詢課表紀錄失敗:', error);
+                document.getElementById('classHistoryLoading').style.display = 'none';
+                document.getElementById('classHistoryEmpty').style.display = 'block';
+            }
+        }
+
+        function filterClassHistory(filter) {
+            currentClassFilter = filter;
+
+            document.querySelectorAll('.class-filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.filter === filter);
+            });
+
+            const filteredData = filter === 'all'
+                ? classHistoryData
+                : classHistoryData.filter(item => item.class_type === filter);
+
+            if (filteredData.length > 0) {
+                document.getElementById('classHistoryEmpty').style.display = 'none';
+                renderClassHistoryTimeline(filteredData);
+            } else {
+                document.getElementById('classHistoryTimelineContent').innerHTML = '';
+                document.getElementById('classHistoryEmpty').style.display = 'block';
+            }
+        }
+
+        function renderClassHistoryTimeline(data) {
+            const container = document.getElementById('classHistoryTimelineContent');
+
+            const classTypeNames = {
+                'strength_training': '💪 重訓',
+                'pilates': '🧘 皮拉提斯',
+                'stretching': '🤸 伸展'
+            };
+
+            const html = data.map((item, index) => {
+                const date = new Date(item.class_date);
+                const formattedDate = `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')}`;
+                const isLatest = index === 0;
+                const detailHtml = generateClassHistoryDetailHtml(item);
+                const classTypeName = classTypeNames[item.class_type] || item.class_type;
+
+                return `
+                    <div class="moti-timeline-item" data-index="${index}">
+                        <div class="moti-timeline-dot"></div>
+                        <div class="moti-timeline-header" onclick="toggleClassHistoryDetail(${index})">
+                            <div class="moti-timeline-date">
+                                <span class="date">${formattedDate} ${item.class_time || ''}</span>
+                                ${isLatest ? '<span class="badge">最新</span>' : ''}
+                            </div>
+                            <div class="moti-timeline-summary">
+                                ${classTypeName} · ${item.coach_name || '未指定教練'}
+                            </div>
+                            <span class="moti-timeline-arrow">›</span>
+                        </div>
+                        <div class="moti-timeline-detail">
+                            <div class="moti-detail-content">
+                                ${detailHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        function generateClassHistoryDetailHtml(item) {
+            const classTypeNames = {
+                'strength_training': '💪 重訓',
+                'pilates': '🧘 皮拉提斯',
+                'stretching': '🤸 伸展'
+            };
+
+            let html = '';
+
+            if (item.photos && item.photos.trim() !== '') {
+                const photos = item.photos.split(',').map(url => url.trim()).filter(url => url);
+
+                if (photos.length > 0) {
+                    const firstPhoto = photos[0];
+                    const albumUrl = `https://oxencust.github.io/class-album/?id=${item.id}`;
+
+                    html += `
+                        <div class="moti-detail-section">
+                            <div class="moti-image-section">
+                                <div class="moti-image-container">
+                                    <img src="${firstPhoto}" alt="課表紀錄" onclick="openLightbox('${firstPhoto}')" onerror="this.style.display='none'">
+                                </div>
+                                <a href="${albumUrl}" target="_blank" class="moti-album-btn">
+                                    📷 查看全部照片 (${photos.length}張)
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            html += `
+                <div class="moti-detail-section">
+                    <div class="moti-detail-title">📋 課程資訊</div>
+                    <div class="skeleton-list">
+                        <div class="skeleton-item"><label>日期</label><span>${item.class_date || '-'}</span></div>
+                        <div class="skeleton-item"><label>時間</label><span>${item.class_time || '-'}</span></div>
+                        <div class="skeleton-item"><label>教練</label><span>${item.coach_name || '-'}</span></div>
+                        ${item.training_purpose ? `<div class="skeleton-item"><label>訓練目的</label><span>${item.training_purpose}</span></div>` : ''}
+                    </div>
+                </div>
+            `;
+
+            if (item.training_details) {
+                let details;
+                try {
+                    details = typeof item.training_details === 'string' ? JSON.parse(item.training_details) : item.training_details;
+                } catch (e) {
+                    details = null;
+                }
+
+                if (details) {
+                    if (item.class_type === 'strength_training' && details.exercises) {
+                        html += `
+                            <div class="moti-detail-section">
+                                <div class="moti-detail-title">🏋️ 訓練內容</div>
+                                <div class="skeleton-list">
+                        `;
+                        details.exercises.forEach((ex, i) => {
+                            const setsInfo = ex.sets ? ex.sets.map(s => `${s.weight}kg×${s.reps}`).join(', ') : '';
+                            html += `<div class="skeleton-item"><label>${i+1}. ${ex.name || '-'}</label><span>${ex.equipment || ''} ${setsInfo}</span></div>`;
+                        });
+                        html += `</div></div>`;
+                    }
+
+                    if (item.class_type === 'pilates' && details.pi_movements) {
+                        html += `
+                            <div class="moti-detail-section">
+                                <div class="moti-detail-title">🧘 訓練內容</div>
+                                <div class="skeleton-list">
+                        `;
+                        details.pi_movements.forEach((mv, i) => {
+                            html += `<div class="skeleton-item"><label>${i+1}. ${mv.name || '-'}</label><span>${mv.pi_equipment || ''} ${mv.reps || ''}下 ${mv.sets || ''}組</span></div>`;
+                        });
+                        html += `</div></div>`;
+                    }
+
+                    if (item.class_type === 'stretching') {
+                        if (details.mainComplaint) {
+                            html += `
+                                <div class="moti-detail-section">
+                                    <div class="moti-detail-title">📍 當堂課程主訴</div>
+                                    <div class="moti-notes">${details.mainComplaint}</div>
+                                </div>
+                            `;
+                        }
+                        if (details.extendedAreas && details.extendedAreas.length > 0) {
+                            html += `
+                                <div class="moti-detail-section">
+                                    <div class="moti-detail-title">🔗 延伸部位</div>
+                                    <div class="moti-notes">${details.extendedAreas.join(', ')}</div>
+                                </div>
+                            `;
+                        }
+                        if (details.tools && details.tools.length > 0) {
+                            html += `
+                                <div class="moti-detail-section">
+                                    <div class="moti-detail-title">🛠️ 使用輔具</div>
+                                    <div class="moti-notes">${details.tools.join(', ')}</div>
+                                </div>
+                            `;
+                        }
+                        if (details.progressRating) {
+                            html += `
+                                <div class="moti-detail-section">
+                                    <div class="moti-detail-title">⭐ 學生主訴緊繃進步星數</div>
+                                    <div class="moti-notes">${details.progressRating}/10</div>
+                                </div>
+                            `;
+                        }
+                    }
+                }
+            }
+
+            let statusHtml = '';
+            if (item.mental_state_rating) {
+                statusHtml += `<div class="skeleton-item"><label>課間狀態</label><span>${item.mental_state_rating}/5</span></div>`;
+            }
+            if (item.incident_types && item.incident_types !== '無' && item.incident_types !== '') {
+                statusHtml += `<div class="skeleton-item"><label>發生狀況</label><span style="color: var(--pink-dark);">${item.incident_types}</span></div>`;
+            }
+
+            if (statusHtml) {
+                html += `
+                    <div class="moti-detail-section">
+                        <div class="moti-detail-title">👤 學員狀況</div>
+                        <div class="skeleton-list">${statusHtml}</div>
+                    </div>
+                `;
+            }
+
+            return html;
+        }
+
+        function toggleClassHistoryDetail(index) {
+            const container = document.getElementById('classHistoryTimelineContent');
+            const items = container.querySelectorAll('.moti-timeline-item');
+            const targetItem = container.querySelector(`.moti-timeline-item[data-index="${index}"]`);
+
+            if (targetItem.classList.contains('active')) {
+                targetItem.classList.remove('active');
+            } else {
+                items.forEach(item => item.classList.remove('active'));
+                targetItem.classList.add('active');
+            }
+        }
+
         // ============================================
         // 照片處理
         // ============================================
@@ -1218,8 +2758,8 @@
                 return false;
             }
 
-            if (!selectedTimeSlot) {
-                showToast('請選擇上課時段', 'error');
+            if (!document.getElementById('classTime').value) {
+                showToast('請填寫上課時間', 'error');
                 return false;
             }
 
@@ -1295,7 +2835,7 @@
                     memberId: selectedMember.id,
                     memberName: selectedMember.name,
                     classDate: document.getElementById('classDate').value,
-                    classTime: selectedTimeSlot,
+                    classTime: document.getElementById('classTime').value,
                     photos: uploadedPhotoUrls.join(','),
                     trainingContent: document.getElementById('trainingContent').value.trim(),
                     isLate: document.querySelector('input[name="isLate"]:checked').value === 'yes' ? 1 : 0,
@@ -1372,17 +2912,16 @@
         
         function resetForm() {
             selectedMember = null;
-            selectedTimeSlot = '';
             photoFiles = [];
             uploadedPhotoUrls = [];
             mentalStateValue = 0;
 
             document.getElementById('memberInfoCard').classList.remove('show');
             document.getElementById('memberSearch').value = '';
-            // 重設日期為今天
-            var today = new Date();
-            document.getElementById('classDate').value = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
-            document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('active'));
+            // 重設日期時間
+            var now = new Date();
+            document.getElementById('classDate').value = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+            document.getElementById('classTime').value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
             document.getElementById('photoPreviewContainer').innerHTML = '';
             document.getElementById('trainingContent').value = '';
             document.getElementById('mentalState').value = '';
