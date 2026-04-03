@@ -2679,6 +2679,17 @@
                 </div>
             `;
 
+            // 文字描述紀錄（新版用 notes 欄位）
+            if (item.notes && item.notes.trim()) {
+                html += `
+                    <div class="moti-detail-section">
+                        <div class="moti-detail-title">📝 訓練內容描述</div>
+                        <div class="moti-notes">${item.notes}</div>
+                    </div>
+                `;
+            }
+
+            // 結構化訓練紀錄（舊版用 training_details JSON）
             if (item.training_details) {
                 let details;
                 try {
