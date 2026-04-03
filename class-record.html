@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>衡點健康 - 課表紀錄</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        :root {
+            --white: #ffffff;
+            --gray: #808080;
+            --gray-light: #f5f5f5;
+            --gray-dark: #333333;
+            --green: #7ac19a;
+            --green-light: #e8f5e9;
+            --green-dark: #5f846f;
+            --pink: #f2ac98;
+            --pink-light: #faece8;
+            --pink-dark: #c67566;
+            --yellow: #ffe08b;
+            --yellow-light: #fff8e1;
+            --yellow-dark: #ba9e60;
+            --blue: #9fcccc;
+            --blue-light: #e0f2f1;
+            --blue-dark: #66888e;
+            --red: #e57373;
+            --red-light: #ffebee;
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-full: 9999px;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, var(--green-light) 0%, var(--white) 50%, var(--blue-light) 100%);
+            min-height: 100vh;
+            color: var(--gray-dark);
+            padding-bottom: 100px;
+        }
+        
+        /* 載入畫面 */
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--white);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+        .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+        .loading-logo {
+            width: 80px; height: 80px;
+            background: linear-gradient(135deg, var(--green), var(--green-dark));
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: var(--spacing-lg);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        .loading-logo span { font-size: 20px; font-weight: 700; color: var(--white); }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .loading-text { color: var(--gray); font-size: 14px; }
+        
+        /* Header */
+        .header {
+            background: var(--white);
+            padding: var(--spacing-md);
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-content {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        .header-logo {
+            width: 44px; height: 44px;
+            background: linear-gradient(135deg, var(--green), var(--green-dark));
+            border-radius: var(--radius-md);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .header-logo span { font-size: 14px; font-weight: 700; color: var(--white); }
+        .header-info { flex: 1; }
+        .header-title { font-size: 16px; font-weight: 700; }
+        .header-subtitle { font-size: 12px; color: var(--gray); }
+        .coach-badge {
+            background: var(--green-light);
+            color: var(--green-dark);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-full);
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        /* Container */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+        
+        /* Card */
+        .card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-md);
+            box-shadow: var(--shadow-md);
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+        }
+        .card-icon {
+            width: 36px; height: 36px;
+            border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+        }
+        .card-icon.green { background: var(--green-light); }
+        .card-icon.blue { background: var(--blue-light); }
+        .card-icon.pink { background: var(--pink-light); }
+        .card-title { font-size: 16px; font-weight: 600; }
+        
+        /* Form */
+        .form-group { margin-bottom: var(--spacing-lg); }
+        .form-group:last-child { margin-bottom: 0; }
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: var(--spacing-sm);
+            color: var(--gray-dark);
+        }
+        .required { color: var(--red); margin-left: 2px; }
+        
+        .form-textarea {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 2px solid var(--gray-light);
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-family: inherit;
+            min-height: 120px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--green);
+        }
+        
+        /* 搜尋區塊 */
+        .search-container { display: flex; gap: var(--spacing-sm); }
+        .search-input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+        }
+        .search-input {
+            width: 100%;
+            padding: 12px 40px 12px 42px;
+            border: 2px solid var(--gray-light);
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: var(--green);
+        }
+        .search-clear {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--gray-light);
+            border: none;
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+            display: none;
+        }
+        .search-clear.show { display: block; }
+        .search-btn {
+            padding: 12px 20px;
+            background: var(--green);
+            color: var(--white);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .search-btn:hover { background: var(--green-dark); }
+        
+        /* 搜尋結果 */
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0; right: 0;
+            background: var(--white);
+            border: 2px solid var(--gray-light);
+            border-radius: var(--radius-md);
+            margin-top: 4px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 50;
+            display: none;
+            box-shadow: var(--shadow-md);
+        }
+        .search-results.show { display: block; }
+        .search-result-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--gray-light);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        .search-result-item:last-child { border-bottom: none; }
+        .search-result-item:hover { background: var(--green-light); }
+        .search-result-item .name { font-weight: 500; }
+        .search-result-item .sub { font-size: 12px; color: var(--gray); }
+        .search-no-result {
+            padding: 16px;
+            text-align: center;
+            color: var(--gray);
+        }
+        
+        /* 學員資訊卡 */
+        .member-info-card {
+            background: var(--green-light);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            display: none;
+        }
+        .member-info-card.show { display: block; }
+        .member-info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+        }
+        .member-info-title {
+            font-weight: 600;
+            color: var(--green-dark);
+        }
+        .member-info-clear {
+            background: none;
+            border: none;
+            color: var(--green-dark);
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .member-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-sm);
+        }
+        .member-info-item {
+            background: var(--white);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-sm);
+        }
+        .member-info-item label {
+            font-size: 11px;
+            color: var(--gray);
+            display: block;
+        }
+        .member-info-item span {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .member-disease-alert {
+            background: var(--red-light);
+            border: 1px solid var(--red);
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            margin-top: var(--spacing-sm);
+        }
+        .member-disease-alert label {
+            font-size: 12px;
+            color: var(--red);
+            font-weight: 600;
+        }
+        .member-disease-alert span {
+            font-size: 13px;
+            color: var(--gray-dark);
+            display: block;
+            margin-top: 2px;
+        }
+        
+        /* 課表紀錄方式選擇 */
+        .record-method-hint {
+            background: var(--yellow-light);
+            border: 1px solid var(--yellow);
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            font-size: 13px;
+            color: var(--yellow-dark);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .record-section {
+            background: var(--gray-light);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+        .record-section:last-child { margin-bottom: 0; }
+        .record-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-dark);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        .record-section-title .check {
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: var(--gray);
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+        .record-section-title .check.filled { background: var(--green); }
+        
+        /* 照片上傳 */
+        .photo-preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+        .photo-preview-item {
+            position: relative;
+            width: 80px; height: 80px;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+        .photo-preview-item img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+        }
+        .photo-preview-item .delete-btn {
+            position: absolute;
+            top: 4px; right: 4px;
+            width: 22px; height: 22px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .photo-buttons {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+        .photo-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-xs);
+            padding: 12px;
+            border: 2px dashed var(--gray);
+            border-radius: var(--radius-md);
+            background: var(--white);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gray-dark);
+            transition: all 0.3s;
+        }
+        .photo-btn:hover {
+            border-color: var(--green);
+            background: var(--green-light);
+        }
+        .photo-btn.upload { border-color: var(--blue); }
+        .photo-btn.camera { border-color: var(--pink); }
+        
+        /* 星星評分 */
+        .star-rating {
+            display: flex;
+            gap: var(--spacing-xs);
+        }
+        .star-rating .star {
+            font-size: 28px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .star-rating .star::before { content: '☆'; color: var(--gray); }
+        .star-rating .star.active::before { content: '★'; color: var(--yellow); }
+        .star-rating .star:hover { transform: scale(1.2); }
+        
+        /* Checkbox / Radio */
+        .checkbox-group, .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+        }
+        .checkbox-item, .radio-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: 10px 14px;
+            background: var(--gray-light);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .checkbox-item:has(input:checked),
+        .radio-item:has(input:checked) {
+            background: var(--green-light);
+            box-shadow: inset 0 0 0 2px var(--green);
+        }
+        .checkbox-item input, .radio-item input {
+            width: 18px; height: 18px;
+            accent-color: var(--green);
+        }
+        .checkbox-item label, .radio-item label {
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .divider {
+            height: 1px;
+            background: var(--gray-light);
+            margin: var(--spacing-lg) 0;
+        }
+        
+        /* 條件欄位 */
+        .conditional-field {
+            display: none;
+            margin-top: var(--spacing-md);
+        }
+        .conditional-field.show { display: block; }
+        
+        /* 底部按鈕 */
+        .bottom-actions {
+            position: fixed;
+            bottom: 0;
+            left: 0; right: 0;
+            background: var(--white);
+            padding: var(--spacing-md);
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        .bottom-actions-content {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-secondary {
+            background: var(--gray-light);
+            color: var(--gray-dark);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--green), var(--green-dark));
+            color: var(--white);
+        }
+        .btn-primary:disabled {
+            background: var(--gray);
+            cursor: not-allowed;
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: var(--gray-dark);
+            color: var(--white);
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            z-index: 2000;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .toast.success { background: var(--green-dark); }
+        .toast.error { background: var(--pink-dark); }
+        
+        /* 圖片放大 */
+        .lightbox {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 3000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .lightbox.show { display: flex; }
+        .lightbox img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: var(--radius-md);
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 20px; right: 20px;
+            width: 44px; height: 44px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- 載入畫面 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-logo"><span>衡點</span></div>
+        <div class="loading-text">正在載入...</div>
+    </div>
+    
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+    
+    <!-- 圖片放大 -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+        <img id="lightboxImage" src="" alt="放大圖片">
+    </div>
+    
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-logo"><span>衡點</span></div>
+            <div class="header-info">
+                <div class="header-title">課表紀錄</div>
+                <div class="header-subtitle" id="currentDate"></div>
+            </div>
+            <div class="coach-badge" id="coachBadge">載入中...</div>
+        </div>
+    </header>
+    
+    <!-- 主內容 -->
+    <div class="container">
+        <!-- 學員資訊 -->
+        <section class="card" id="memberSection">
+            <div class="card-header">
+                <div class="card-icon green">👤</div>
+                <div class="card-title">選擇學員</div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">搜尋學員<span class="required">*</span></label>
+                <div class="search-container">
+                    <div class="search-input-wrapper">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="search-input" id="memberSearch" placeholder="輸入學員姓名或編號..." autocomplete="off">
+                        <button type="button" class="search-clear" id="searchClear" onclick="clearMemberSearch()">✕</button>
+                        <div class="search-results" id="searchResults"></div>
+                    </div>
+                    <button type="button" class="search-btn" onclick="doSearch()">搜尋</button>
+                </div>
+            </div>
+            
+            <div class="member-info-card" id="memberInfoCard">
+                <div class="member-info-header">
+                    <span class="member-info-title">✓ 已選擇學員</span>
+                    <button type="button" class="member-info-clear" onclick="clearSelectedMember()">重新選擇</button>
+                </div>
+                <div class="member-info-grid">
+                    <div class="member-info-item">
+                        <label>會員編號</label>
+                        <span id="memberIdDisplay">-</span>
+                    </div>
+                    <div class="member-info-item">
+                        <label>姓名</label>
+                        <span id="memberName">-</span>
+                    </div>
+                    <div class="member-info-item">
+                        <label>性別</label>
+                        <span id="memberGender">-</span>
+                    </div>
+                    <div class="member-info-item">
+                        <label>生日</label>
+                        <span id="memberBirthday">-</span>
+                    </div>
+                </div>
+                <div class="member-disease-alert" id="memberDiseaseAlert" style="display: none;">
+                    <label>⚠️ 疾病史注意</label>
+                    <span id="memberDisease">-</span>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 課表紀錄 -->
+        <section class="card" id="recordSection">
+            <div class="card-header">
+                <div class="card-icon blue">📋</div>
+                <div class="card-title">課表紀錄</div>
+            </div>
+            
+            <div class="record-method-hint">
+                <span>💡</span>
+                <span>請選擇 <strong>拍照上傳</strong> 或 <strong>文字描述</strong>，至少填寫一項</span>
+            </div>
+            
+            <!-- 方式一：拍照上傳 -->
+            <div class="record-section" id="photoRecordSection">
+                <div class="record-section-title">
+                    <span class="check" id="photoCheck">✓</span>
+                    <span>方式一：拍照/上傳課表照片</span>
+                </div>
+                <div class="photo-preview-container" id="photoPreviewContainer"></div>
+                <div class="photo-buttons">
+                    <label class="photo-btn upload">
+                        <input type="file" accept="image/*" multiple id="photoUpload" onchange="handlePhotoUpload(event)" style="display: none;">
+                        <span>📁</span> 上傳照片
+                    </label>
+                    <label class="photo-btn camera">
+                        <input type="file" accept="image/*" capture="environment" id="photoCapture" onchange="handlePhotoCapture(event)" style="display: none;">
+                        <span>📸</span> 拍照
+                    </label>
+                </div>
+            </div>
+            
+            <!-- 方式二：文字描述 -->
+            <div class="record-section" id="textRecordSection">
+                <div class="record-section-title">
+                    <span class="check" id="textCheck">✓</span>
+                    <span>方式二：文字描述訓練內容</span>
+                </div>
+                <textarea class="form-textarea" id="trainingContent" placeholder="請輸入本堂課的訓練內容..."></textarea>
+            </div>
+        </section>
+        
+        <!-- 學員當日狀況 -->
+        <section class="card" id="statusSection">
+            <div class="card-header">
+                <div class="card-icon pink">📊</div>
+                <div class="card-title">學員當日狀況</div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">學生是否遲到<span class="required">*</span></label>
+                <div class="radio-group">
+                    <div class="radio-item">
+                        <input type="radio" name="isLate" id="isLate_no" value="no">
+                        <label for="isLate_no">否</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" name="isLate" id="isLate_yes" value="yes">
+                        <label for="isLate_yes">是</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">課間狀態<span class="required">*</span></label>
+                <div class="star-rating" id="mentalStateRating">
+                    <span class="star" data-value="1"></span>
+                    <span class="star" data-value="2"></span>
+                    <span class="star" data-value="3"></span>
+                    <span class="star" data-value="4"></span>
+                    <span class="star" data-value="5"></span>
+                </div>
+                <input type="hidden" id="mentalState" value="">
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="form-group">
+                <label class="form-label">課間是否發生以下狀況（必選）<span class="required">*</span></label>
+                <div class="checkbox-group" id="incidentGroup">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="incident_none" value="無">
+                        <label for="incident_none">無</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="incident_dizzy" value="學員暈眩">
+                        <label for="incident_dizzy">學員暈眩</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="incident_nausea" value="疑似噁心想吐">
+                        <label for="incident_nausea">疑似噁心想吐</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="incident_vomit" value="嘔吐">
+                        <label for="incident_vomit">嘔吐</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="incident_injury" value="運動傷害">
+                        <label for="incident_injury">運動傷害</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="form-group">
+                <label class="form-label">是否需要行政關心<span class="required">*</span></label>
+                <p style="font-size: 12px; color: var(--gray); margin-bottom: var(--spacing-sm);">如有新增疾病史、或其他需要注意的情況</p>
+                <div class="radio-group">
+                    <div class="radio-item">
+                        <input type="radio" name="needAdminFollowup" id="adminFollowup_no" value="no">
+                        <label for="adminFollowup_no">否</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" name="needAdminFollowup" id="adminFollowup_yes" value="yes">
+                        <label for="adminFollowup_yes">是</label>
+                    </div>
+                </div>
+                <div class="conditional-field" id="adminFollowupNotes">
+                    <label class="form-label">請描述情況<span class="required">*</span></label>
+                    <textarea class="form-textarea" id="adminFollowupText" placeholder="請詳細說明需要行政關心的情況..." style="min-height: 80px;"></textarea>
+                </div>
+            </div>
+        </section>
+    </div>
+    
+    <!-- 底部按鈕 -->
+    <div class="bottom-actions">
+        <div class="bottom-actions-content">
+            <button type="button" class="btn btn-secondary" onclick="resetForm()">清除重填</button>
+            <button type="button" class="btn btn-primary" id="submitBtn" onclick="submitForm()">送出紀錄</button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // 設定
+        // ============================================
+        const CONFIG = {
+            LIFF_ID: '2007947083-YgZ9QQRn',
+            WEBHOOK_URL: 'https://hook.us2.make.com/9ydnn20drmcegfl5cvm9e3tqqb37azir',
+            EDGE_FUNCTION_URL: 'https://mnjilhpztnowaplggvkk.supabase.co/functions/v1/class-record-api',
+            IMAGEKIT_AUTH_URL: 'YOUR_IMAGEKIT_AUTH_URL',
+            DEBUG_MODE: true
+        };
+
+        // ============================================
+        // Edge Function 呼叫
+        // ============================================
+        async function callEdge(action, params = {}) {
+            const res = await fetch(CONFIG.EDGE_FUNCTION_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, ...params })
+            });
+            if (!res.ok) throw new Error('Edge Function error: ' + res.status);
+            return res.json();
+        }
+
+        // ============================================
+        // 全域變數
+        // ============================================
+        let currentCoach = null;
+        let selectedMember = null;
+        let photoFiles = [];
+        let uploadedPhotoUrls = [];
+        let mentalStateValue = 0;
+        let searchTimeout = null;
+        
+        // ============================================
+        // 初始化
+        // ============================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            setCurrentDate();
+            setupEventListeners();
+            
+            if (CONFIG.DEBUG_MODE) {
+                await initDebugMode();
+            } else {
+                await initLiff();
+            }
+            
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }, 500);
+        });
+        
+        function setCurrentDate() {
+            const now = new Date();
+            document.getElementById('currentDate').textContent = 
+                now.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+        
+        async function initDebugMode() {
+            currentCoach = { id: 1, name: '測試教練' };
+            document.getElementById('coachBadge').textContent = currentCoach.name;
+        }
+        
+        async function initLiff() {
+            try {
+                await liff.init({ liffId: CONFIG.LIFF_ID });
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                    return;
+                }
+                const profile = await liff.getProfile();
+                await loadCoachInfo(profile.userId);
+            } catch (error) {
+                console.error('LIFF 初始化失敗:', error);
+                showToast('系統初始化失敗', 'error');
+            }
+        }
+        
+        async function loadCoachInfo(lineUserId) {
+            try {
+                const data = await callEdge('getCoachByLineId', { lineUserId });
+                if (data.success) {
+                    currentCoach = data.coach;
+                    document.getElementById('coachBadge').textContent = currentCoach.name;
+                }
+            } catch (error) {
+                console.error('載入教練資訊失敗:', error);
+            }
+        }
+        
+        // ============================================
+        // 事件監聽
+        // ============================================
+        function setupEventListeners() {
+            // 搜尋輸入
+            const searchInput = document.getElementById('memberSearch');
+            const searchResults = document.getElementById('searchResults');
+            const searchClear = document.getElementById('searchClear');
+            
+            searchInput.addEventListener('input', function() {
+                const query = this.value.trim();
+                searchClear.classList.toggle('show', query.length > 0);
+                
+                clearTimeout(searchTimeout);
+                if (query.length < 1) {
+                    searchResults.classList.remove('show');
+                    return;
+                }
+                searchTimeout = setTimeout(() => searchMembers(query), 300);
+            });
+            
+            searchInput.addEventListener('focus', () => {
+                if (searchResults.querySelector('.search-result-item')) {
+                    searchResults.classList.add('show');
+                }
+            });
+            
+            searchInput.addEventListener('blur', () => {
+                setTimeout(() => searchResults.classList.remove('show'), 200);
+            });
+            
+            // 星星評分
+            document.querySelectorAll('#mentalStateRating .star').forEach(star => {
+                star.addEventListener('click', function() {
+                    const value = parseInt(this.dataset.value);
+                    setMentalState(value);
+                });
+            });
+            
+            // 課間狀況互斥（選「無」時清除其他）
+            document.getElementById('incident_none').addEventListener('change', function() {
+                if (this.checked) {
+                    document.querySelectorAll('#incidentGroup input:not(#incident_none)').forEach(cb => {
+                        cb.checked = false;
+                    });
+                }
+            });
+            document.querySelectorAll('#incidentGroup input:not(#incident_none)').forEach(cb => {
+                cb.addEventListener('change', function() {
+                    if (this.checked) {
+                        document.getElementById('incident_none').checked = false;
+                    }
+                });
+            });
+            
+            // 行政關心條件欄位
+            document.querySelectorAll('input[name="needAdminFollowup"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    document.getElementById('adminFollowupNotes').classList.toggle('show', this.value === 'yes');
+                });
+            });
+            
+            // 文字內容變更時更新 check 狀態
+            document.getElementById('trainingContent').addEventListener('input', updateRecordChecks);
+        }
+        
+        function setMentalState(value) {
+            mentalStateValue = value;
+            document.getElementById('mentalState').value = value;
+            document.querySelectorAll('#mentalStateRating .star').forEach(star => {
+                star.classList.toggle('active', parseInt(star.dataset.value) <= value);
+            });
+        }
+        
+        function updateRecordChecks() {
+            const hasPhotos = photoFiles.length > 0;
+            const hasText = document.getElementById('trainingContent').value.trim().length > 0;
+            
+            document.getElementById('photoCheck').classList.toggle('filled', hasPhotos);
+            document.getElementById('textCheck').classList.toggle('filled', hasText);
+        }
+        
+        // ============================================
+        // 學員搜尋
+        // ============================================
+        function doSearch() {
+            const query = document.getElementById('memberSearch').value.trim();
+            if (query) searchMembers(query);
+        }
+        
+        async function searchMembers(query) {
+            const searchResults = document.getElementById('searchResults');
+            
+            try {
+                let members = [];
+                
+                if (CONFIG.DEBUG_MODE) {
+                    // Mock 資料
+                    const mock = [
+                        { id: 'TWHDS20230000053', name: '江舒右', phone: '0912345678', gender: '男', birthday: '1990-05-15' },
+                        { id: 'TWHDS20230000088', name: '張美玲', phone: '0923456789', gender: '女', birthday: '1985-08-20', disease_history: '高血壓' },
+                        { id: 'TWHDS20230000045', name: '王志豪', phone: '0934567890', gender: '男', birthday: '1992-03-10' }
+                    ];
+                    members = mock.filter(m =>
+                        m.name.includes(query) || m.phone.includes(query) || m.id.includes(query)
+                    );
+                } else {
+                    const data = await callEdge('searchMembers', { query });
+                    if (data.success) {
+                        members = (data.members || []).filter(m => m && m.id && m.name);
+                    }
+                }
+                
+                if (members.length === 0) {
+                    searchResults.innerHTML = '<div class="search-no-result">找不到符合的學員</div>';
+                } else {
+                    searchResults.innerHTML = members.map(m => `
+                        <div class="search-result-item" onclick='selectMember(${JSON.stringify(m).replace(/'/g, "&#39;")})'>
+                            <div>
+                                <div class="name">${m.name}</div>
+                                <div class="sub">${m.id}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                searchResults.classList.add('show');
+            } catch (error) {
+                console.error('搜尋失敗:', error);
+                searchResults.innerHTML = '<div class="search-no-result">搜尋失敗</div>';
+                searchResults.classList.add('show');
+            }
+        }
+        
+        function selectMember(member) {
+            selectedMember = member;
+            
+            document.getElementById('memberSearch').value = '';
+            document.getElementById('searchResults').classList.remove('show');
+            document.getElementById('searchClear').classList.remove('show');
+            
+            document.getElementById('memberIdDisplay').textContent = member.id;
+            document.getElementById('memberName').textContent = member.name;
+            document.getElementById('memberGender').textContent = 
+                (member.gender === 'male' || member.gender === '男') ? '男' : '女';
+            document.getElementById('memberBirthday').textContent = member.birthday || '-';
+            
+            // 疾病史
+            const diseaseAlert = document.getElementById('memberDiseaseAlert');
+            if (member.disease_history) {
+                document.getElementById('memberDisease').textContent = member.disease_history;
+                diseaseAlert.style.display = 'block';
+            } else {
+                diseaseAlert.style.display = 'none';
+            }
+            
+            document.getElementById('memberInfoCard').classList.add('show');
+            
+            // 清空照片
+            photoFiles = [];
+            uploadedPhotoUrls = [];
+            document.getElementById('photoPreviewContainer').innerHTML = '';
+            updateRecordChecks();
+        }
+        
+        function clearMemberSearch() {
+            document.getElementById('memberSearch').value = '';
+            document.getElementById('searchResults').classList.remove('show');
+            document.getElementById('searchClear').classList.remove('show');
+        }
+        
+        function clearSelectedMember() {
+            selectedMember = null;
+            document.getElementById('memberInfoCard').classList.remove('show');
+            document.getElementById('memberSearch').focus();
+        }
+        
+        // ============================================
+        // 照片處理
+        // ============================================
+        function handlePhotoUpload(event) {
+            const files = Array.from(event.target.files);
+            files.forEach(file => addPhoto(file));
+            event.target.value = '';
+        }
+        
+        function handlePhotoCapture(event) {
+            const file = event.target.files[0];
+            if (file) addPhoto(file);
+            event.target.value = '';
+        }
+        
+        function addPhoto(file) {
+            if (!file.type.startsWith('image/')) {
+                showToast('請選擇圖片檔案', 'error');
+                return;
+            }
+            
+            photoFiles.push(file);
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const container = document.getElementById('photoPreviewContainer');
+                const index = photoFiles.length - 1;
+                
+                const div = document.createElement('div');
+                div.className = 'photo-preview-item';
+                div.innerHTML = `
+                    <img src="${e.target.result}" alt="課表照片" onclick="openLightbox('${e.target.result}')">
+                    <button type="button" class="delete-btn" onclick="removePhoto(${index})">✕</button>
+                `;
+                container.appendChild(div);
+                
+                updateRecordChecks();
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function removePhoto(index) {
+            photoFiles.splice(index, 1);
+            renderPhotoPreview();
+            updateRecordChecks();
+        }
+        
+        function renderPhotoPreview() {
+            const container = document.getElementById('photoPreviewContainer');
+            container.innerHTML = '';
+            
+            photoFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const div = document.createElement('div');
+                    div.className = 'photo-preview-item';
+                    div.innerHTML = `
+                        <img src="${e.target.result}" alt="課表照片" onclick="openLightbox('${e.target.result}')">
+                        <button type="button" class="delete-btn" onclick="removePhoto(${index})">✕</button>
+                    `;
+                    container.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        function openLightbox(src) {
+            document.getElementById('lightboxImage').src = src;
+            document.getElementById('lightbox').classList.add('show');
+        }
+        
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('show');
+        }
+        
+        // ============================================
+        // 表單送出
+        // ============================================
+        function validateForm() {
+            if (!selectedMember) {
+                showToast('請選擇學員', 'error');
+                return false;
+            }
+            
+            const hasPhotos = photoFiles.length > 0;
+            const hasText = document.getElementById('trainingContent').value.trim().length > 0;
+            
+            if (!hasPhotos && !hasText) {
+                showToast('請至少填寫照片或文字描述', 'error');
+                return false;
+            }
+            
+            // 檢查是否遲到
+            const isLateChecked = document.querySelector('input[name="isLate"]:checked');
+            if (!isLateChecked) {
+                showToast('請選擇學生是否遲到', 'error');
+                return false;
+            }
+            
+            // 檢查課間狀態（星星）
+            if (mentalStateValue === 0) {
+                showToast('請選擇課間狀態', 'error');
+                return false;
+            }
+            
+            // 檢查課間狀況
+            const incidentChecked = document.querySelectorAll('#incidentGroup input:checked').length > 0;
+            if (!incidentChecked) {
+                showToast('請選擇課間狀況', 'error');
+                return false;
+            }
+            
+            // 檢查是否需要行政關心
+            const needFollowupChecked = document.querySelector('input[name="needAdminFollowup"]:checked');
+            if (!needFollowupChecked) {
+                showToast('請選擇是否需要行政關心', 'error');
+                return false;
+            }
+            
+            if (needFollowupChecked.value === 'yes' && !document.getElementById('adminFollowupText').value.trim()) {
+                showToast('請填寫需要行政關心的情況', 'error');
+                return false;
+            }
+            
+            return true;
+        }
+        
+        async function submitForm() {
+            if (!validateForm()) return;
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '送出中...';
+            
+            try {
+                // 上傳照片（如果有）
+                if (photoFiles.length > 0) {
+                    showToast(`正在上傳照片 0/${photoFiles.length}...`, 'info');
+                    for (let i = 0; i < photoFiles.length; i++) {
+                        showToast(`正在上傳照片 ${i + 1}/${photoFiles.length}...`, 'info');
+                        const url = await uploadPhoto(photoFiles[i]);
+                        if (url) uploadedPhotoUrls.push(url);
+                    }
+                }
+                
+                // 收集課間狀況
+                const incidents = Array.from(document.querySelectorAll('#incidentGroup input:checked'))
+                    .map(cb => cb.value);
+                
+                const formData = {
+                    action: 'submitClassRecord',
+                    coachId: currentCoach.id,
+                    coachName: currentCoach.name,
+                    memberId: selectedMember.id,
+                    memberName: selectedMember.name,
+                    classDate: new Date().toISOString().split('T')[0],
+                    classTime: new Date().toTimeString().slice(0, 5),
+                    photos: uploadedPhotoUrls.join(','),
+                    trainingContent: document.getElementById('trainingContent').value.trim(),
+                    isLate: document.querySelector('input[name="isLate"]:checked').value === 'yes' ? 1 : 0,
+                    mentalStateRating: mentalStateValue,
+                    incidentTypes: incidents.join(','),
+                    needAdminFollowup: document.querySelector('input[name="needAdminFollowup"]:checked').value === 'yes' ? 1 : 0,
+                    adminFollowupNotes: document.getElementById('adminFollowupText').value.trim()
+                };
+                
+                if (CONFIG.DEBUG_MODE) {
+                    console.log('送出資料:', formData);
+                    showToast('✅ 紀錄已送出（測試模式）', 'success');
+                } else {
+                    const response = await fetch(CONFIG.WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formData)
+                    });
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showToast('✅ 紀錄已送出', 'success');
+                        setTimeout(() => resetForm(), 1500);
+                    } else {
+                        throw new Error(result.message || '送出失敗');
+                    }
+                }
+            } catch (error) {
+                console.error('送出失敗:', error);
+                showToast('送出失敗：' + error.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '送出紀錄';
+            }
+        }
+        
+        async function uploadPhoto(file) {
+            // TODO: 實作 ImageKit 上傳
+            // 這裡先回傳 mock URL
+            if (CONFIG.DEBUG_MODE) {
+                return 'https://via.placeholder.com/200';
+            }
+            
+            try {
+                // 取得 ImageKit 簽名
+                const authResponse = await fetch(CONFIG.IMAGEKIT_AUTH_URL);
+                const auth = await authResponse.json();
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('publicKey', auth.publicKey);
+                formData.append('signature', auth.signature);
+                formData.append('expire', auth.expire);
+                formData.append('token', auth.token);
+                formData.append('folder', '/class-records/');
+                formData.append('fileName', `${selectedMember.id}_${Date.now()}.jpg`);
+                
+                const uploadResponse = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const uploadResult = await uploadResponse.json();
+                
+                return uploadResult.url;
+            } catch (error) {
+                console.error('照片上傳失敗:', error);
+                return null;
+            }
+        }
+        
+        function resetForm() {
+            selectedMember = null;
+            photoFiles = [];
+            uploadedPhotoUrls = [];
+            mentalStateValue = 0;
+            
+            document.getElementById('memberInfoCard').classList.remove('show');
+            document.getElementById('memberSearch').value = '';
+            document.getElementById('photoPreviewContainer').innerHTML = '';
+            document.getElementById('trainingContent').value = '';
+            document.getElementById('mentalState').value = '';
+            document.querySelectorAll('#mentalStateRating .star').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('#incidentGroup input').forEach(cb => cb.checked = false);
+            document.querySelectorAll('input[name="isLate"]').forEach(r => r.checked = false);
+            document.querySelectorAll('input[name="needAdminFollowup"]').forEach(r => r.checked = false);
+            document.getElementById('adminFollowupNotes').classList.remove('show');
+            document.getElementById('adminFollowupText').value = '';
+            
+            updateRecordChecks();
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        // ============================================
+        // 工具函數
+        // ============================================
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show ' + type;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+        
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeLightbox();
+        });
+    </script>
+</body>
+</html>
