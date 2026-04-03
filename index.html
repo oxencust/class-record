@@ -1236,35 +1236,39 @@
         }
         
         async function uploadPhoto(file) {
-            // TODO: 實作 ImageKit 上傳
-            // 這裡先回傳 mock URL
             if (CONFIG.DEBUG_MODE) {
                 return 'https://via.placeholder.com/200';
             }
-            
+
             try {
-                // 取得 ImageKit 簽名
-                const authResponse = await fetch(CONFIG.IMAGEKIT_AUTH_URL);
-                const auth = await authResponse.json();
-                
+                // 從 Edge Function 取得 ImageKit 簽名
+                const authResult = await callEdge('getImageKitAuth');
+                if (!authResult.success) throw new Error(authResult.error || '無法取得上傳簽名');
+
                 const formData = new FormData();
                 formData.append('file', file);
-                formData.append('publicKey', auth.publicKey);
-                formData.append('signature', auth.signature);
-                formData.append('expire', auth.expire);
-                formData.append('token', auth.token);
+                formData.append('publicKey', authResult.publicKey);
+                formData.append('signature', authResult.signature);
+                formData.append('expire', String(authResult.expire));
+                formData.append('token', authResult.token);
                 formData.append('folder', '/class-records/');
                 formData.append('fileName', `${selectedMember.id}_${Date.now()}.jpg`);
-                
+
                 const uploadResponse = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
                     method: 'POST',
                     body: formData
                 });
+
+                if (!uploadResponse.ok) {
+                    const errText = await uploadResponse.text();
+                    throw new Error('ImageKit 上傳失敗: ' + errText);
+                }
+
                 const uploadResult = await uploadResponse.json();
-                
                 return uploadResult.url;
             } catch (error) {
                 console.error('照片上傳失敗:', error);
+                showToast('照片上傳失敗: ' + error.message, 'error');
                 return null;
             }
         }
