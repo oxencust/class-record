@@ -449,6 +449,19 @@
             margin-bottom: 0;
         }
 
+        /* 課程類型選擇 */
+        .class-type-row {
+            display: flex; gap: 8px; margin-top: var(--spacing-sm);
+        }
+        .class-type-btn {
+            flex: 1; padding: 10px 0; border: 2px solid var(--gray-light);
+            border-radius: var(--radius-sm); background: #fff;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            text-align: center; transition: all 0.2s;
+        }
+        .class-type-btn.active { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
+        .class-type-btn:not(.active):hover { border-color: #ccc; }
+
         /* MOTI/InBody 歷程按鈕 */
         .moti-history-btn {
             width: 100%;
@@ -1548,6 +1561,14 @@
                     <input type="time" class="form-input" id="classTime">
                 </div>
             </div>
+            <div class="form-group" style="margin-top: var(--spacing-sm);">
+                <label class="form-label">課程類型<span class="required">*</span></label>
+                <div class="class-type-row">
+                    <button type="button" class="class-type-btn" data-type="strength_training" onclick="selectClassType(this)">💪 重訓</button>
+                    <button type="button" class="class-type-btn" data-type="pilates" onclick="selectClassType(this)">🧘 皮拉提斯</button>
+                    <button type="button" class="class-type-btn" data-type="stretching" onclick="selectClassType(this)">🤸 伸展</button>
+                </div>
+            </div>
         </section>
 
         <!-- 課表紀錄 -->
@@ -1712,6 +1733,7 @@
         // ============================================
         let currentCoach = null;
         let selectedMember = null;
+        let selectedClassType = '';
         let photoFiles = [];
         let uploadedPhotoUrls = [];
 
@@ -1799,6 +1821,12 @@
             startDraftAutoSave();
         });
         
+        function selectClassType(btn) {
+            document.querySelectorAll('.class-type-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedClassType = btn.dataset.type;
+        }
+
         function setCurrentDate() {
             const now = new Date();
             document.getElementById('currentDate').textContent = 
@@ -1823,6 +1851,12 @@
                         name: decodeURIComponent(paramCoachName)
                     };
                     document.getElementById('coachBadge').textContent = currentCoach.name;
+                    // 自動帶入教練的課程類型
+                    const paramCoachType = urlParams.get('coach_type');
+                    if (paramCoachType) {
+                        const btn = document.querySelector(`.class-type-btn[data-type="${paramCoachType}"]`);
+                        if (btn) selectClassType(btn);
+                    }
                     return;
                 }
 
@@ -2881,6 +2915,7 @@
                 savedAt: new Date().toISOString(),
                 memberId: selectedMember ? selectedMember.id : null,
                 memberName: selectedMember ? selectedMember.name : null,
+                classType: selectedClassType,
                 classDate: document.getElementById('classDate').value,
                 classTime: document.getElementById('classTime').value,
                 trainingContent: document.getElementById('trainingContent').value,
@@ -2949,6 +2984,12 @@
                         if (member) selectMember(member);
                     }
                 } catch (e) { console.log('恢復學員失敗:', e.message); }
+            }
+
+            // 恢復課程類型
+            if (draft.classType) {
+                const btn = document.querySelector(`.class-type-btn[data-type="${draft.classType}"]`);
+                if (btn) selectClassType(btn);
             }
 
             // 恢復日期時間
@@ -3023,6 +3064,11 @@
                 return false;
             }
 
+            if (!selectedClassType) {
+                showToast('請選擇課程類型', 'error');
+                return false;
+            }
+
             const hasPhotos = photoFiles.length > 0;
             const hasText = document.getElementById('trainingContent').value.trim().length > 0;
 
@@ -3094,6 +3140,7 @@
                     coachName: currentCoach.name,
                     memberId: selectedMember.id,
                     memberName: selectedMember.name,
+                    classType: selectedClassType,
                     classDate: document.getElementById('classDate').value,
                     classTime: document.getElementById('classTime').value,
                     photos: uploadedPhotoUrls.join(','),
@@ -3178,6 +3225,7 @@
             photoFiles = [];
             uploadedPhotoUrls = [];
             mentalStateValue = 0;
+            // 課程類型保留（教練預設類型不需重設）
 
             document.getElementById('memberInfoCard').classList.remove('show');
             document.getElementById('memberSearch').value = '';
