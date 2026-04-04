@@ -1438,6 +1438,7 @@
                     <div class="member-info-item">
                         <label>生日</label>
                         <span id="memberBirthday">-</span>
+                        <span id="memberAge" style="font-size:12px; color:#999; margin-left:4px;"></span>
                     </div>
                 </div>
                 <div class="member-disease-alert" id="memberDiseaseAlert" style="display: none;">
@@ -1996,6 +1997,18 @@
             document.getElementById('memberGender').textContent = 
                 (member.gender === 'male' || member.gender === '男') ? '男' : '女';
             document.getElementById('memberBirthday').textContent = member.birth_date || '-';
+            // 自動換算年齡
+            const ageEl = document.getElementById('memberAge');
+            if (member.birth_date) {
+                const birth = new Date(member.birth_date);
+                const today = new Date();
+                let age = today.getFullYear() - birth.getFullYear();
+                const monthDiff = today.getMonth() - birth.getMonth();
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age--;
+                ageEl.textContent = `（${age} 歲）`;
+            } else {
+                ageEl.textContent = '';
+            }
 
             // 疾病史
             const diseaseAlert = document.getElementById('memberDiseaseAlert');
