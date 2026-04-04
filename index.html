@@ -462,6 +462,26 @@
         .class-type-btn.active { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
         .class-type-btn:not(.active):hover { border-color: #ccc; }
 
+        /* 課表照片網格 */
+        .class-photos-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .class-photos-grid img {
+            width: 100%; aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--gray-light);
+            cursor: pointer;
+        }
+        .class-photos-grid img:hover { border-color: var(--green); }
+        .class-photos-count {
+            font-size: 12px; color: #999;
+            margin-top: 4px; text-align: center;
+        }
+
         /* MOTI/InBody 歷程按鈕 */
         .moti-history-btn {
             width: 100%;
@@ -2213,7 +2233,7 @@
 
         function generateMotiDetailHtml(item) {
             let imageHtml = '';
-            const albumUrl = `https://oxencust.github.io/moti-album/?id=${item.id}`;
+            const albumUrl = `https://oxencust.github.io/moti-album/?id=${item.id}&name=${encodeURIComponent(selectedMember ? selectedMember.name : '')}`;
 
             if (item.moti_images) {
                 const images = item.moti_images.split(',').map(url => url.trim()).filter(url => url);
@@ -2681,19 +2701,17 @@
                 const photos = item.photos.split(',').map(url => url.trim()).filter(url => url);
 
                 if (photos.length > 0) {
-                    const firstPhoto = photos[0];
-                    const albumUrl = `https://oxencust.github.io/class-album/?id=${item.id}`;
+                    const photosHtml = photos.map(url =>
+                        `<img src="${url}?tr=w-200,h-200,f-jpg" alt="課表照片" onclick="openLightbox('${url}')" onerror="this.style.display='none'">`
+                    ).join('');
 
                     html += `
                         <div class="moti-detail-section">
-                            <div class="moti-image-section">
-                                <div class="moti-image-container">
-                                    <img src="${firstPhoto}" alt="課表紀錄" onclick="openLightbox('${firstPhoto}')" onerror="this.style.display='none'">
-                                </div>
-                                <a href="${albumUrl}" target="_blank" class="moti-album-btn">
-                                    📷 查看全部照片 (${photos.length}張)
-                                </a>
+                            <div class="moti-detail-title">📷 課表照片</div>
+                            <div class="class-photos-grid">
+                                ${photosHtml}
                             </div>
+                            <div class="class-photos-count">共 ${photos.length} 張照片</div>
                         </div>
                     `;
                 }
