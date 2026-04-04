@@ -1319,7 +1319,7 @@
             flex: 1; padding: 12px; border: none; border-radius: 10px;
             font-size: 15px; font-weight: 600; cursor: pointer;
         }
-        .draft-btn-restore { background: var(--primary); color: #fff; }
+        .draft-btn-restore { background: var(--green); color: #fff; }
         .draft-btn-discard { background: #f0f0f0; color: #666; }
 
         /* 圖片放大 */
@@ -3077,7 +3077,7 @@
                 
                 const formData = {
                     action: 'submitClassRecord',
-                    coachId: currentCoach.id,
+                    coachCode: currentCoach.id,
                     coachName: currentCoach.name,
                     memberId: selectedMember.id,
                     memberName: selectedMember.name,
