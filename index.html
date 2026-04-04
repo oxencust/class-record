@@ -2967,10 +2967,10 @@
                     classTime: document.getElementById('classTime').value,
                     photos: uploadedPhotoUrls.join(','),
                     trainingContent: document.getElementById('trainingContent').value.trim(),
-                    isLate: document.querySelector('input[name="isLate"]:checked').value === 'yes' ? 1 : 0,
+                    isLate: document.querySelector('input[name="isLate"]:checked').value === 'yes',
                     mentalStateRating: mentalStateValue,
                     incidentTypes: incidents.join(','),
-                    needAdminFollowup: document.querySelector('input[name="needAdminFollowup"]:checked').value === 'yes' ? 1 : 0,
+                    needAdminFollowup: document.querySelector('input[name="needAdminFollowup"]:checked').value === 'yes',
                     adminFollowupNotes: document.getElementById('adminFollowupText').value.trim()
                 };
                 
