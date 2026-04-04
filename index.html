@@ -2661,7 +2661,9 @@
                 const formattedDate = `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')}`;
                 const isLatest = index === 0;
                 const detailHtml = generateClassHistoryDetailHtml(item);
-                const classTypeName = classTypeNames[item.class_type] || item.class_type;
+                const classTypeName = classTypeNames[item.class_type] || '';
+                const coachName = item.coach_name || '未指定教練';
+                const summaryParts = [classTypeName, coachName].filter(p => p);
 
                 return `
                     <div class="moti-timeline-item" data-index="${index}">
@@ -2672,7 +2674,7 @@
                                 ${isLatest ? '<span class="badge">最新</span>' : ''}
                             </div>
                             <div class="moti-timeline-summary">
-                                ${classTypeName} · ${item.coach_name || '未指定教練'}
+                                ${summaryParts.join(' · ')}
                             </div>
                             <span class="moti-timeline-arrow">›</span>
                         </div>
@@ -2723,6 +2725,7 @@
                     <div class="skeleton-list">
                         <div class="skeleton-item"><label>日期</label><span>${item.class_date || '-'}</span></div>
                         <div class="skeleton-item"><label>時間</label><span>${item.class_time || '-'}</span></div>
+                        <div class="skeleton-item"><label>課程類型</label><span>${classTypeNames[item.class_type] || item.class_type || '-'}</span></div>
                         <div class="skeleton-item"><label>教練</label><span>${item.coach_name || '-'}</span></div>
                         ${item.training_purpose ? `<div class="skeleton-item"><label>訓練目的</label><span>${item.training_purpose}</span></div>` : ''}
                     </div>
