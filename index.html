@@ -2719,7 +2719,11 @@
                     });
 
                     if (validData.length > 0) {
-                        validData.sort((a, b) => new Date(b.class_date) - new Date(a.class_date));
+                        validData.sort((a, b) => {
+                            const dateA = new Date(a.class_date + 'T' + (a.class_time || '00:00'));
+                            const dateB = new Date(b.class_date + 'T' + (b.class_time || '00:00'));
+                            return dateB - dateA;
+                        });
                         classHistoryData = validData;
                         classHistoryLoaded = true;
                         renderClassHistoryTimeline(validData);
@@ -3059,10 +3063,11 @@
 
         function saveDraft() {
             try {
-                // 至少選了學員或填了內容才暫存
+                // 需要選了學員且至少填了一項內容才暫存
                 const draft = collectDraftData();
-                const hasContent = draft.memberId || draft.trainingContent.trim() || draft.mentalStateRating > 0;
-                if (!hasContent) return;
+                if (!draft.memberId) return;
+                const hasRealContent = draft.trainingContent.trim() || draft.mentalStateRating > 0 || draft.isLate || draft.needAdminFollowup || draft.incidentTypes.length > 0;
+                if (!hasRealContent) return;
                 localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
             } catch (e) { /* localStorage 不可用就跳過 */ }
         }
