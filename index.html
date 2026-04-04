@@ -1355,6 +1355,92 @@
         .draft-btn-restore { background: var(--green); color: #fff; }
         .draft-btn-discard { background: #f0f0f0; color: #666; }
 
+        /* 送出確認彈窗 */
+        .confirm-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 4000;
+            display: none;
+            align-items: center; justify-content: center;
+        }
+        .confirm-overlay.show { display: flex; }
+        .confirm-dialog {
+            background: #fff;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 340px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .confirm-dialog-title {
+            font-size: 17px; font-weight: 700; color: #1a1a2e;
+            text-align: center; margin-bottom: 16px;
+        }
+        .confirm-info-list {
+            background: var(--green-light);
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+        }
+        .confirm-info-row {
+            display: flex; justify-content: space-between;
+            padding: 6px 0;
+            font-size: 14px;
+        }
+        .confirm-info-row:not(:last-child) {
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+        .confirm-info-label { color: #888; }
+        .confirm-info-value { font-weight: 600; color: #333; }
+        .confirm-btns { display: flex; gap: 10px; }
+        .confirm-btns button {
+            flex: 1; padding: 12px; border: none; border-radius: 10px;
+            font-size: 15px; font-weight: 600; cursor: pointer;
+        }
+        .confirm-btn-cancel { background: #f0f0f0; color: #666; }
+        .confirm-btn-submit { background: var(--green); color: #fff; }
+
+        /* 送出成功全螢幕 */
+        .success-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, var(--green), var(--green-dark));
+            z-index: 5000;
+            display: none;
+            align-items: center; justify-content: center;
+            flex-direction: column;
+        }
+        .success-overlay.show { display: flex; }
+        .success-icon {
+            width: 80px; height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 40px;
+            margin-bottom: 20px;
+            animation: successPop 0.5s ease;
+        }
+        @keyframes successPop {
+            0% { transform: scale(0); }
+            60% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .success-title {
+            font-size: 22px; font-weight: 700;
+            color: #fff; margin-bottom: 8px;
+        }
+        .success-desc {
+            font-size: 15px; color: rgba(255,255,255,0.85);
+            margin-bottom: 30px;
+        }
+        .success-btn {
+            padding: 12px 40px;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.4);
+            border-radius: 12px;
+            color: #fff; font-size: 15px; font-weight: 600;
+            cursor: pointer;
+        }
+
         /* 圖片放大 */
         .lightbox {
             position: fixed;
@@ -1408,6 +1494,26 @@
                 <button class="draft-btn-restore" onclick="restoreDraft()">恢復</button>
             </div>
         </div>
+    </div>
+
+    <!-- 送出確認彈窗 -->
+    <div class="confirm-overlay" id="confirmOverlay">
+        <div class="confirm-dialog">
+            <div class="confirm-dialog-title">確認送出紀錄</div>
+            <div class="confirm-info-list" id="confirmInfoList"></div>
+            <div class="confirm-btns">
+                <button class="confirm-btn-cancel" onclick="closeConfirm()">返回修改</button>
+                <button class="confirm-btn-submit" onclick="confirmSubmit()">確認送出</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 送出成功畫面 -->
+    <div class="success-overlay" id="successOverlay">
+        <div class="success-icon">✓</div>
+        <div class="success-title">紀錄送出成功！</div>
+        <div class="success-desc" id="successDesc"></div>
+        <button class="success-btn" onclick="closeSuccess()">繼續填寫下一筆</button>
     </div>
 
     <!-- 圖片放大 -->
@@ -1600,7 +1706,7 @@
             
             <div class="record-method-hint">
                 <span>💡</span>
-                <span>請選擇 <strong>拍照上傳</strong> 或 <strong>文字描述</strong>，二擇一填寫</span>
+                <span>請選擇 <strong>拍照上傳</strong> 或 <strong>文字描述</strong>，至少填寫一項</span>
             </div>
             
             <!-- 方式一：拍照上傳 -->
@@ -1720,7 +1826,7 @@
     <div class="bottom-actions">
         <div class="bottom-actions-content">
             <button type="button" class="btn btn-secondary" onclick="resetForm()">清除重填</button>
-            <button type="button" class="btn btn-primary" id="submitBtn" onclick="submitForm()">送出紀錄</button>
+            <button type="button" class="btn btn-primary" id="submitBtn" onclick="showConfirmDialog()">送出紀錄</button>
         </div>
     </div>
 
@@ -3133,8 +3239,59 @@
             return true;
         }
         
-        async function submitForm() {
+        function showConfirmDialog() {
             if (!validateForm()) return;
+
+            const classTypeNames = {
+                'strength_training': '💪 重訓',
+                'pilates': '🧘 皮拉提斯',
+                'stretching': '🤸 伸展'
+            };
+
+            const hasPhotos = photoFiles.length > 0;
+            const hasText = document.getElementById('trainingContent').value.trim().length > 0;
+            const recordTypes = [];
+            if (hasPhotos) recordTypes.push(`📷 照片 ${photoFiles.length} 張`);
+            if (hasText) recordTypes.push('📝 文字描述');
+
+            // 學員狀況
+            const isLate = document.querySelector('input[name="isLate"]:checked').value === 'yes';
+            const mentalStars = '⭐'.repeat(mentalStateValue);
+            const incidents = Array.from(document.querySelectorAll('#incidentGroup input:checked')).map(cb => {
+                const label = cb.parentElement.querySelector('label') || cb.nextElementSibling;
+                return label ? label.textContent.trim() : cb.value;
+            });
+            const needFollowup = document.querySelector('input[name="needAdminFollowup"]:checked').value === 'yes';
+
+            const rows = [
+                { label: '學員', value: selectedMember.name },
+                { label: '課程類型', value: classTypeNames[selectedClassType] || selectedClassType || '-' },
+                { label: '上課日期', value: document.getElementById('classDate').value },
+                { label: '上課時間', value: document.getElementById('classTime').value },
+                { label: '紀錄方式', value: recordTypes.join(' + ') },
+                { label: '是否遲到', value: isLate ? '⚠️ 是' : '否' },
+                { label: '課間狀態', value: mentalStars || '-' },
+                { label: '課間狀況', value: incidents.join('、') || '-' },
+                { label: '行政關心', value: needFollowup ? '⚠️ 需要' : '不需要' }
+            ];
+
+            document.getElementById('confirmInfoList').innerHTML = rows.map(r =>
+                `<div class="confirm-info-row"><span class="confirm-info-label">${r.label}</span><span class="confirm-info-value">${r.value}</span></div>`
+            ).join('');
+
+            document.getElementById('confirmOverlay').classList.add('show');
+        }
+
+        function closeConfirm() {
+            document.getElementById('confirmOverlay').classList.remove('show');
+        }
+
+        function confirmSubmit() {
+            document.getElementById('confirmOverlay').classList.remove('show');
+            submitForm();
+        }
+
+        async function submitForm() {
             
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
@@ -3176,7 +3333,7 @@
                 if (CONFIG.DEBUG_MODE) {
                     console.log('送出資料:', formData);
                     clearDraft();
-                    showToast('✅ 紀錄已送出（測試模式）', 'success');
+                    showSuccess(formData.memberName);
                 } else {
                     const response = await fetch(CONFIG.WEBHOOK_URL, {
                         method: 'POST',
@@ -3187,8 +3344,7 @@
                     // Make.com webhook 回傳 "Accepted" 文字（非 JSON），status 2xx 即成功
                     if (response.ok) {
                         clearDraft();
-                        showToast('✅ 紀錄已送出', 'success');
-                        setTimeout(() => resetForm(), 1500);
+                        showSuccess(formData.memberName);
                     } else {
                         throw new Error('送出失敗: HTTP ' + response.status);
                     }
@@ -3241,6 +3397,16 @@
             }
         }
         
+        function showSuccess(memberName) {
+            document.getElementById('successDesc').textContent = `${memberName || '學員'} 的課表紀錄已成功送出`;
+            document.getElementById('successOverlay').classList.add('show');
+        }
+
+        function closeSuccess() {
+            document.getElementById('successOverlay').classList.remove('show');
+            resetForm();
+        }
+
         function resetForm() {
             selectedMember = null;
             photoFiles = [];
