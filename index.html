@@ -2283,6 +2283,7 @@
                     });
 
                     if (validData.length > 0) {
+                        validData.sort((a, b) => new Date(b.assessment_date || b.date) - new Date(a.assessment_date || a.date));
                         motiHistoryData = validData;
                         renderMotiTimeline(validData);
                     } else {
@@ -2623,6 +2624,7 @@
                     });
 
                     if (inbodyData.length > 0) {
+                        inbodyData.sort((a, b) => new Date(b.assessment_date || b.date) - new Date(a.assessment_date || a.date));
                         inbodyHistoryData = inbodyData;
                         renderInbodyTimeline(inbodyData);
                     } else {
@@ -2717,6 +2719,7 @@
                     });
 
                     if (validData.length > 0) {
+                        validData.sort((a, b) => new Date(b.class_date) - new Date(a.class_date));
                         classHistoryData = validData;
                         classHistoryLoaded = true;
                         renderClassHistoryTimeline(validData);
