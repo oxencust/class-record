@@ -1319,7 +1319,37 @@
         .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
         .toast.success { background: var(--green-dark); }
         .toast.error { background: var(--pink-dark); }
-        
+
+        /* 草稿恢復提示 */
+        .draft-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 4000;
+            display: none;
+            align-items: center; justify-content: center;
+        }
+        .draft-overlay.show { display: flex; }
+        .draft-dialog {
+            background: #fff;
+            border-radius: 16px;
+            padding: 28px 24px;
+            max-width: 340px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .draft-dialog-icon { font-size: 40px; margin-bottom: 12px; }
+        .draft-dialog-title { font-size: 17px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
+        .draft-dialog-desc { font-size: 14px; color: #666; margin-bottom: 6px; line-height: 1.5; }
+        .draft-dialog-time { font-size: 12px; color: #999; margin-bottom: 20px; }
+        .draft-dialog-btns { display: flex; gap: 10px; }
+        .draft-dialog-btns button {
+            flex: 1; padding: 12px; border: none; border-radius: 10px;
+            font-size: 15px; font-weight: 600; cursor: pointer;
+        }
+        .draft-btn-restore { background: var(--primary); color: #fff; }
+        .draft-btn-discard { background: #f0f0f0; color: #666; }
+
         /* 圖片放大 */
         .lightbox {
             position: fixed;
@@ -1360,7 +1390,21 @@
     
     <!-- Toast -->
     <div class="toast" id="toast"></div>
-    
+
+    <!-- 草稿恢復提示 -->
+    <div class="draft-overlay" id="draftOverlay">
+        <div class="draft-dialog">
+            <div class="draft-dialog-icon">📝</div>
+            <div class="draft-dialog-title">發現未送出的紀錄</div>
+            <div class="draft-dialog-desc">上次填寫的課表紀錄尚未送出，是否要恢復繼續填寫？</div>
+            <div class="draft-dialog-time" id="draftTime"></div>
+            <div class="draft-dialog-btns">
+                <button class="draft-btn-discard" onclick="discardDraft()">捨棄</button>
+                <button class="draft-btn-restore" onclick="restoreDraft()">恢復</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 圖片放大 -->
     <div class="lightbox" id="lightbox" onclick="closeLightbox()">
         <button class="lightbox-close" onclick="closeLightbox()">✕</button>
@@ -1780,7 +1824,12 @@
             
             setTimeout(() => {
                 document.getElementById('loadingOverlay').classList.add('hidden');
+                // 載入完成後檢查是否有未送出的草稿
+                checkAndPromptDraft();
             }, 500);
+
+            // 啟動自動暫存
+            startDraftAutoSave();
         });
         
         function setCurrentDate() {
@@ -1993,8 +2042,8 @@
 
             // 諮詢備註
             const notesInfo = document.getElementById('memberNotesInfo');
-            if (member.notes && member.notes.trim()) {
-                document.getElementById('memberNotes').textContent = member.notes;
+            if (member.consultation_notes && member.consultation_notes.trim()) {
+                document.getElementById('memberNotes').textContent = member.consultation_notes;
                 notesInfo.style.display = 'block';
             } else {
                 notesInfo.style.display = 'none';
@@ -2873,6 +2922,142 @@
         }
         
         // ============================================
+        // 草稿自動暫存 / 恢復
+        // ============================================
+        const DRAFT_KEY = 'classRecordDraft';
+        let draftAutoSaveTimer = null;
+
+        function collectDraftData() {
+            const isLateEl = document.querySelector('input[name="isLate"]:checked');
+            const followupEl = document.querySelector('input[name="needAdminFollowup"]:checked');
+            const incidents = Array.from(document.querySelectorAll('#incidentGroup input:checked')).map(cb => cb.value);
+            return {
+                savedAt: new Date().toISOString(),
+                memberId: selectedMember ? selectedMember.id : null,
+                memberName: selectedMember ? selectedMember.name : null,
+                classDate: document.getElementById('classDate').value,
+                classTime: document.getElementById('classTime').value,
+                trainingContent: document.getElementById('trainingContent').value,
+                isLate: isLateEl ? isLateEl.value : null,
+                mentalStateRating: mentalStateValue,
+                incidentTypes: incidents,
+                needAdminFollowup: followupEl ? followupEl.value : null,
+                adminFollowupNotes: document.getElementById('adminFollowupText').value
+            };
+        }
+
+        function saveDraft() {
+            try {
+                // 至少選了學員或填了內容才暫存
+                const draft = collectDraftData();
+                const hasContent = draft.memberId || draft.trainingContent.trim() || draft.mentalStateRating > 0;
+                if (!hasContent) return;
+                localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+            } catch (e) { /* localStorage 不可用就跳過 */ }
+        }
+
+        function clearDraft() {
+            try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+        }
+
+        function getSavedDraft() {
+            try {
+                const raw = localStorage.getItem(DRAFT_KEY);
+                if (!raw) return null;
+                const draft = JSON.parse(raw);
+                // 超過 24 小時自動丟棄
+                if (draft.savedAt && (Date.now() - new Date(draft.savedAt).getTime()) > 24 * 60 * 60 * 1000) {
+                    clearDraft();
+                    return null;
+                }
+                return draft;
+            } catch (e) { return null; }
+        }
+
+        function checkAndPromptDraft() {
+            const draft = getSavedDraft();
+            if (!draft) return;
+            const savedTime = new Date(draft.savedAt);
+            const timeStr = savedTime.toLocaleString('zh-TW', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const memberInfo = draft.memberName ? `學員：${draft.memberName}` : '';
+            document.getElementById('draftTime').textContent = `${timeStr}${memberInfo ? ' · ' + memberInfo : ''}`;
+            document.getElementById('draftOverlay').classList.add('show');
+        }
+
+        function discardDraft() {
+            clearDraft();
+            document.getElementById('draftOverlay').classList.remove('show');
+        }
+
+        async function restoreDraft() {
+            document.getElementById('draftOverlay').classList.remove('show');
+            const draft = getSavedDraft();
+            if (!draft) return;
+
+            // 恢復學員（重新搜尋並選取）
+            if (draft.memberId) {
+                try {
+                    const result = await callEdge('searchMembers', { query: draft.memberId });
+                    if (result.success && result.data && result.data.length > 0) {
+                        const member = result.data.find(m => String(m.id) === String(draft.memberId));
+                        if (member) selectMember(member);
+                    }
+                } catch (e) { console.log('恢復學員失敗:', e.message); }
+            }
+
+            // 恢復日期時間
+            if (draft.classDate) document.getElementById('classDate').value = draft.classDate;
+            if (draft.classTime) document.getElementById('classTime').value = draft.classTime;
+
+            // 恢復訓練內容
+            if (draft.trainingContent) document.getElementById('trainingContent').value = draft.trainingContent;
+
+            // 恢復是否遲到
+            if (draft.isLate) {
+                const radio = document.getElementById(draft.isLate === 'yes' ? 'isLate_yes' : 'isLate_no');
+                if (radio) radio.checked = true;
+            }
+
+            // 恢復心理狀態
+            if (draft.mentalStateRating > 0) {
+                mentalStateValue = draft.mentalStateRating;
+                document.querySelectorAll('#mentalStateRating .star').forEach((s, i) => {
+                    s.classList.toggle('active', i < mentalStateValue);
+                });
+            }
+
+            // 恢復課間狀況
+            if (draft.incidentTypes && draft.incidentTypes.length > 0) {
+                draft.incidentTypes.forEach(val => {
+                    const cb = document.querySelector(`#incidentGroup input[value="${val}"]`);
+                    if (cb) cb.checked = true;
+                });
+            }
+
+            // 恢復行政關心
+            if (draft.needAdminFollowup) {
+                const radio = document.getElementById(draft.needAdminFollowup === 'yes' ? 'adminFollowup_yes' : 'adminFollowup_no');
+                if (radio) {
+                    radio.checked = true;
+                    if (draft.needAdminFollowup === 'yes') {
+                        document.getElementById('adminFollowupNotes').classList.add('show');
+                    }
+                }
+            }
+            if (draft.adminFollowupNotes) document.getElementById('adminFollowupText').value = draft.adminFollowupNotes;
+
+            updateRecordChecks();
+            showToast('已恢復上次填寫的內容', 'success');
+        }
+
+        function startDraftAutoSave() {
+            // 每 5 秒自動暫存一次
+            draftAutoSaveTimer = setInterval(saveDraft, 5000);
+            // 離開頁面前也暫存
+            window.addEventListener('beforeunload', saveDraft);
+        }
+
+        // ============================================
         // 表單送出
         // ============================================
         function validateForm() {
@@ -2976,6 +3161,7 @@
                 
                 if (CONFIG.DEBUG_MODE) {
                     console.log('送出資料:', formData);
+                    clearDraft();
                     showToast('✅ 紀錄已送出（測試模式）', 'success');
                 } else {
                     const response = await fetch(CONFIG.WEBHOOK_URL, {
@@ -2986,6 +3172,7 @@
 
                     // Make.com webhook 回傳 "Accepted" 文字（非 JSON），status 2xx 即成功
                     if (response.ok) {
+                        clearDraft();
                         showToast('✅ 紀錄已送出', 'success');
                         setTimeout(() => resetForm(), 1500);
                     } else {
