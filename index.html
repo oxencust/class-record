@@ -2090,14 +2090,16 @@
             try {
                 const result = await callMotiEdge('getPhotos', { memberId });
                 if (result.success && result.data && result.data.length > 0) {
-                    // 取最新一筆有照片的記錄
-                    const latest = result.data[0];
-                    const photos = [latest.front_photo, latest.side_photo, latest.back_photo].filter(p => p && p.trim());
-                    if (photos.length > 0) {
-                        imagesDiv.innerHTML = photos.map(url =>
-                            `<img src="${url}?tr=w-160,h-200,f-jpg" alt="MOTI" onclick="openLightbox('${url}')">`
-                        ).join('');
-                        previewDiv.style.display = 'block';
+                    // 取最新一筆有照片的記錄（moti_images 是逗號分隔的 URL）
+                    const latest = result.data.find(r => r.moti_images && r.moti_images.trim()) || null;
+                    if (latest) {
+                        const photos = latest.moti_images.split(',').map(u => u.trim()).filter(u => u);
+                        if (photos.length > 0) {
+                            // 只顯示第一張作為預覽
+                            const firstUrl = photos[0];
+                            imagesDiv.innerHTML = `<img src="${firstUrl}?tr=w-160,h-200,f-jpg" alt="MOTI" onclick="openLightbox('${firstUrl}')">`;
+                            previewDiv.style.display = 'block';
+                        }
                     }
                 }
             } catch (e) {
@@ -2184,8 +2186,8 @@
             let imageHtml = '';
             const albumUrl = `https://oxencust.github.io/moti-album/?id=${item.id}`;
 
-            if (item.imageUrl) {
-                const images = item.imageUrl.split(',').map(url => url.trim()).filter(url => url);
+            if (item.moti_images) {
+                const images = item.moti_images.split(',').map(url => url.trim()).filter(url => url);
                 if (images.length > 0) {
                     const firstImage = images[0];
                     imageHtml = `
@@ -2551,8 +2553,9 @@
                 const result = await callEdge('getClassRecords', { targetType: 'member', targetId: memberId });
                 document.getElementById('classHistoryLoading').style.display = 'none';
 
-                if (result.data && result.data.length > 0) {
-                    const validData = result.data.filter(item => {
+                const records = result.records || result.data || [];
+                if (records.length > 0) {
+                    const validData = records.filter(item => {
                         if (!item.id) return false;
                         if (!item.class_date || item.class_date === '' || item.class_date === '1970-01-01') return false;
                         return true;
