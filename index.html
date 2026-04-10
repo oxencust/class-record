@@ -3360,7 +3360,7 @@
             } catch (error) {
                 console.error('送出失敗:', error);
                 showToast('送出失敗：' + error.message, 'error');
-            } finally {
+            // 只有失敗時才恢復按鈕，成功後保持 disabled 防止重複送出
                 submitBtn.disabled = false;
                 submitBtn.textContent = '送出紀錄';
             }
