@@ -2340,7 +2340,7 @@
 
         function generateMotiDetailHtml(item) {
             let imageHtml = '';
-            const albumUrl = `https://oxencust.github.io/moti-album/?id=${item.id}&name=${encodeURIComponent(selectedMember ? selectedMember.name : '')}`;
+            const albumUrl = `https://oxencust.github.io/moti-ai-album/?id=${item.id}&name=${encodeURIComponent(selectedMember ? selectedMember.name : '')}`;
 
             if (item.moti_images) {
                 const images = item.moti_images.split(',').map(url => url.trim()).filter(url => url);
