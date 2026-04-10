@@ -3420,6 +3420,12 @@
             photoFiles = [];
             uploadedPhotoUrls = [];
             mentalStateValue = 0;
+            // 重置送出按鈕（上次送出成功後會保持 disabled 防重複點擊）
+            var submitBtn = document.getElementById('submitBtn');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '送出紀錄';
+            }
             // 課程類型保留（教練預設類型不需重設）
 
             document.getElementById('memberInfoCard').classList.remove('show');
