@@ -169,6 +169,36 @@
             outline: none;
             border-color: var(--green);
         }
+
+         .form-input {
+            width: 100%;
+            padding: 14px var(--spacing-md);
+            border: 2px solid var(--gray-light);
+            border-radius: var(--radius-md);
+            font-size: 16px;
+            font-family: inherit;
+            background: #fff;
+            color: var(--gray-dark);
+            transition: border-color 0.3s, box-shadow 0.3s;
+            box-sizing: border-box;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--green);
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+        }
+        .form-input::placeholder {
+            color: #b0b0b0;
+        }
+        /* 日期與時間欄位字級加大，更好點選 */
+        .form-input[type="date"],
+        .form-input[type="time"] {
+            font-size: 18px;
+            font-weight: 600;
+            padding: 16px var(--spacing-md);
+            letter-spacing: 0.5px;
+            min-height: 56px;
+        }
         
         /* 搜尋區塊 */
         .search-container { display: flex; gap: var(--spacing-sm); }
