@@ -1703,6 +1703,18 @@
                 <div class="card-icon blue">📋</div>
                 <div class="card-title">課表紀錄</div>
             </div>
+            <!-- 本日訓練主軸 -->
+<div class="form-group" style="margin-bottom: var(--spacing-md);">
+    <label class="form-label">本日訓練主軸選項<span class="required">*</span></label>
+    <div class="checkbox-group" id="trainingFocusGroup">
+        <div class="checkbox-item"><input type="checkbox" id="focus_shoulder_back" value="肩背"><label for="focus_shoulder_back">肩背</label></div>
+        <div class="checkbox-item"><input type="checkbox" id="focus_core" value="核心"><label for="focus_core">核心</label></div>
+        <div class="checkbox-item"><input type="checkbox" id="focus_glute_leg" value="臀腿"><label for="focus_glute_leg">臀腿</label></div>
+        <div class="checkbox-item"><input type="checkbox" id="focus_flexibility" value="柔軟度"><label for="focus_flexibility">柔軟度</label></div>
+        <div class="checkbox-item"><input type="checkbox" id="focus_other" value="其他" onchange="toggleFocusOtherInput()"><label for="focus_other">其他</label></div>
+    </div>
+    <input type="text" class="form-input" id="trainingFocusOtherText" placeholder="請說明其他訓練主軸..." style="margin-top: var(--spacing-sm); display: none;">
+</div>
             
             <div class="record-method-hint">
                 <span>💡</span>
@@ -1735,6 +1747,12 @@
                     <span>方式二：文字描述訓練內容</span>
                 </div>
                 <textarea class="form-textarea" id="trainingContent" placeholder="請輸入本堂課的訓練內容..."></textarea>
+            </div>
+
+            <!-- 特殊情況備註 -->
+            <div class="form-group" style="margin-top: var(--spacing-md);">
+                <label class="form-label">特殊情況備註</label>
+                <input type="text" class="form-input" id="specialNote" placeholder="特殊情況備註（非必填）">
             </div>
         </section>
         
@@ -3045,6 +3063,7 @@
             const isLateEl = document.querySelector('input[name="isLate"]:checked');
             const followupEl = document.querySelector('input[name="needAdminFollowup"]:checked');
             const incidents = Array.from(document.querySelectorAll('#incidentGroup input:checked')).map(cb => cb.value);
+            const focusItems = Array.from(document.querySelectorAll('#trainingFocusGroup input:checked')).map(cb => cb.value);
             return {
                 savedAt: new Date().toISOString(),
                 memberId: selectedMember ? selectedMember.id : null,
@@ -3056,6 +3075,9 @@
                 isLate: isLateEl ? isLateEl.value : null,
                 mentalStateRating: mentalStateValue,
                 incidentTypes: incidents,
+                trainingFocusItems: focusItems,
+                trainingFocusOtherText: document.getElementById('trainingFocusOtherText').value,
+                specialNote: document.getElementById('specialNote').value,
                 needAdminFollowup: followupEl ? followupEl.value : null,
                 adminFollowupNotes: document.getElementById('adminFollowupText').value
             };
@@ -3156,6 +3178,21 @@
                 });
             }
 
+            // 恢復本日訓練主軸
+            if (draft.trainingFocusItems && draft.trainingFocusItems.length > 0) {
+                draft.trainingFocusItems.forEach(val => {
+                    const cb = document.querySelector(`#trainingFocusGroup input[value="${val}"]`);
+                    if (cb) cb.checked = true;
+                });
+            }
+            if (draft.trainingFocusOtherText) {
+                document.getElementById('trainingFocusOtherText').value = draft.trainingFocusOtherText;
+            }
+            // 若「其他」被勾選，顯示文字欄
+            toggleFocusOtherInput();
+            // 恢復特殊情況備註
+            if (draft.specialNote) document.getElementById('specialNote').value = draft.specialNote;
+
             // 恢復行政關心
             if (draft.needAdminFollowup) {
                 const radio = document.getElementById(draft.needAdminFollowup === 'yes' ? 'adminFollowup_yes' : 'adminFollowup_no');
@@ -3209,6 +3246,19 @@
 
             if (!hasPhotos && !hasText) {
                 showToast('請至少填寫照片或文字描述', 'error');
+                return false;
+            }
+
+             // 檢查本日訓練主軸（至少勾一項）
+            const focusChecked = document.querySelectorAll('#trainingFocusGroup input:checked').length > 0;
+            if (!focusChecked) {
+                showToast('請選擇本日訓練主軸', 'error');
+                return false;
+            }
+            // 若勾了「其他」必須填寫說明
+            const focusOtherCb = document.getElementById('focus_other');
+            if (focusOtherCb && focusOtherCb.checked && !document.getElementById('trainingFocusOtherText').value.trim()) {
+                showToast('請填寫「其他」訓練主軸說明', 'error');
                 return false;
             }
             
@@ -3319,6 +3369,15 @@
                 // 收集課間狀況
                 const incidents = Array.from(document.querySelectorAll('#incidentGroup input:checked'))
                     .map(cb => cb.value);
+
+                        // 收集本日訓練主軸（含「其他」文字）
+                const focusItems = Array.from(document.querySelectorAll('#trainingFocusGroup input:checked'))
+                    .map(cb => cb.value);
+                const focusOtherText = document.getElementById('trainingFocusOtherText').value.trim();
+                // 把「其他」替換成實際填寫的內容
+                const focusItemsDisplay = focusItems.map(v => (v === '其他' && focusOtherText) ? ('其他:' + focusOtherText) : v);
+                const trainingFocus = focusItemsDisplay.join('、');
+                const specialNote = document.getElementById('specialNote').value.trim();
                 
                 const formData = {
                     action: 'submitClassRecord',
@@ -3331,6 +3390,8 @@
                     classTime: document.getElementById('classTime').value,
                     photos: uploadedPhotoUrls.join(','),
                     trainingContent: document.getElementById('trainingContent').value.trim(),
+                    trainingFocus: trainingFocus,
+                    specialNote: specialNote,
                     isLate: document.querySelector('input[name="isLate"]:checked').value === 'yes',
                     mentalStateRating: mentalStateValue,
                     incidentTypes: incidents.join(','),
@@ -3415,6 +3476,19 @@
             resetForm();
         }
 
+        function toggleFocusOtherInput() {
+            const cb = document.getElementById('focus_other');
+            const input = document.getElementById('trainingFocusOtherText');
+            if (!cb || !input) return;
+            if (cb.checked) {
+                input.style.display = '';
+                input.focus();
+            } else {
+                input.style.display = 'none';
+                input.value = '';
+            }
+        }
+
         function resetForm() {
             selectedMember = null;
             photoFiles = [];
@@ -3439,6 +3513,11 @@
             document.getElementById('mentalState').value = '';
             document.querySelectorAll('#mentalStateRating .star').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('#incidentGroup input').forEach(cb => cb.checked = false);
+            document.querySelectorAll('#trainingFocusGroup input').forEach(cb => cb.checked = false);
+            var focusOther = document.getElementById('trainingFocusOtherText');
+            if (focusOther) { focusOther.value = ''; focusOther.style.display = 'none'; }
+            var specialNote = document.getElementById('specialNote');
+            if (specialNote) specialNote.value = '';
             document.querySelectorAll('input[name="isLate"]').forEach(r => r.checked = false);
             document.querySelectorAll('input[name="needAdminFollowup"]').forEach(r => r.checked = false);
             document.getElementById('adminFollowupNotes').classList.remove('show');
