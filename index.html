@@ -164,13 +164,14 @@
             min-height: 120px;
             resize: vertical;
             transition: border-color 0.3s;
+            box-sizing: border-box;
         }
         .form-textarea:focus {
             outline: none;
             border-color: var(--green);
         }
 
-         .form-input {
+        .form-input {
             width: 100%;
             padding: 14px var(--spacing-md);
             border: 2px solid var(--gray-light);
@@ -3434,18 +3435,15 @@
                     clearDraft();
                     showSuccess(formData.memberName);
                 } else {
-                    const response = await fetch(CONFIG.WEBHOOK_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(formData)
-                    });
+                    // Phase 4：改走 Supabase Edge Function（繞過 Make）
+                    // 後端 action = submitClassRecord，欄位已在 class-record-api/index.ts 對齊
+                    const result = await callEdge('submitClassRecord', formData);
 
-                    // Make.com webhook 回傳 "Accepted" 文字（非 JSON），status 2xx 即成功
-                    if (response.ok) {
+                    if (result && result.success) {
                         clearDraft();
                         showSuccess(formData.memberName);
                     } else {
-                        throw new Error('送出失敗: HTTP ' + response.status);
+                        throw new Error('送出失敗：' + (result && result.error ? result.error : '未知錯誤'));
                     }
                 }
             } catch (error) {
