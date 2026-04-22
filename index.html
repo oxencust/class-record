@@ -1869,8 +1869,46 @@
                 </div>
             </div>
         </section>
+
+        <!-- InBody 測量 -->
+        <section class="card" id="inbodySection">
+            <div class="card-header">
+                <div class="card-icon blue">⚖️</div>
+                <div class="card-title">InBody 測量</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">本堂課是否測量 InBody<span class="required">*</span></label>
+                <p style="font-size: 12px; color: var(--gray); margin-bottom: var(--spacing-sm);">若 MOTI 檢測當下無法測量（如生理期），可於此補上傳</p>
+                <div class="radio-group">
+                    <div class="radio-item">
+                        <input type="radio" name="hasInbody" id="hasInbody_no" value="no">
+                        <label for="hasInbody_no">否</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" name="hasInbody" id="hasInbody_yes" value="yes">
+                        <label for="hasInbody_yes">是</label>
+                    </div>
+                </div>
+                <div class="conditional-field" id="inbodyUploadArea">
+                    <label class="form-label">InBody 報表照片<span class="required">*</span>（最多 1 張）</label>
+                    <div class="photo-preview-container" id="inbodyPreviewContainer"></div>
+                    <div class="photo-buttons">
+                        <label class="photo-btn upload">
+                            <input type="file" accept="image/*" id="inbodyUpload" onchange="handleInbodyUpload(event)" style="display: none;">
+                            <span>📁</span> 上傳照片
+                        </label>
+                        <label class="photo-btn camera">
+                            <input type="file" accept="image/*" capture="environment" id="inbodyCapture" onchange="handleInbodyUpload(event)" style="display: none;">
+                            <span>📸</span> 拍照
+                        </label>
+                    </div>
+                    <p style="font-size: 12px; color: var(--gray); margin-top: var(--spacing-sm);">📌 照片將儲存至 InBody 紀錄，學員管理系統可查閱</p>
+                </div>
+            </div>
+        </section>
     </div>
-    
+
     <!-- 底部按鈕 -->
     <div class="bottom-actions">
         <div class="bottom-actions-content">
@@ -1911,6 +1949,10 @@
         let selectedClassType = '';
         let photoFiles = [];
         let uploadedPhotoUrls = [];
+        // InBody 測量相關
+        let inbodyFiles = [];
+        let uploadedInbodyUrl = null;
+        const MAX_INBODY_IMAGES = 1;
 
         // 預設今天日期和現在時間
         (function initDateTime() {
@@ -2122,7 +2164,23 @@
                     document.getElementById('adminFollowupNotes').classList.toggle('show', this.value === 'yes');
                 });
             });
-            
+
+            // InBody 測量條件欄位
+            document.querySelectorAll('input[name="hasInbody"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const show = this.value === 'yes';
+                    document.getElementById('inbodyUploadArea').classList.toggle('show', show);
+                    // 若切回「否」，清空已選照片
+                    if (!show) {
+                        inbodyFiles = [];
+                        uploadedInbodyUrl = null;
+                        document.getElementById('inbodyPreviewContainer').innerHTML = '';
+                        document.getElementById('inbodyUpload').value = '';
+                        document.getElementById('inbodyCapture').value = '';
+                    }
+                });
+            });
+
             // 文字內容變更時更新 check 狀態
             document.getElementById('trainingContent').addEventListener('input', updateRecordChecks);
         }
@@ -3059,7 +3117,7 @@
         function renderPhotoPreview() {
             const container = document.getElementById('photoPreviewContainer');
             container.innerHTML = '';
-            
+
             photoFiles.forEach((file, index) => {
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -3074,7 +3132,125 @@
                 reader.readAsDataURL(file);
             });
         }
-        
+
+        // ============================================
+        // InBody 照片處理
+        // ============================================
+        function handleInbodyUpload(event) {
+            const file = event.target.files[0];
+            if (file) addInbodyFile(file);
+            event.target.value = '';
+        }
+
+        function addInbodyFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showToast('請選擇圖片檔案', 'error');
+                return;
+            }
+            if (inbodyFiles.length >= MAX_INBODY_IMAGES) {
+                showToast(`InBody 照片最多 ${MAX_INBODY_IMAGES} 張，請先刪除現有照片`, 'warning');
+                return;
+            }
+            inbodyFiles.push(file);
+            renderInbodyPreview();
+        }
+
+        function removeInbodyFile(index) {
+            inbodyFiles.splice(index, 1);
+            uploadedInbodyUrl = null;
+            renderInbodyPreview();
+        }
+
+        function renderInbodyPreview() {
+            const container = document.getElementById('inbodyPreviewContainer');
+            container.innerHTML = '';
+
+            inbodyFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const div = document.createElement('div');
+                    div.className = 'photo-preview-item';
+                    div.innerHTML = `
+                        <img src="${e.target.result}" alt="InBody 報表" onclick="openLightbox('${e.target.result}')">
+                        <button type="button" class="delete-btn" onclick="removeInbodyFile(${index})">✕</button>
+                    `;
+                    container.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // 圖片壓縮（canvas-based，與 MOTI 3D 系統一致）
+        async function compressImage(file, maxWidth) {
+            if (typeof maxWidth !== 'number') maxWidth = 1600;
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                img.onload = function() {
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > maxWidth) {
+                        h = Math.round(h * maxWidth / w);
+                        w = maxWidth;
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    canvas.toBlob(function(blob) {
+                        if (!blob) return reject(new Error('compress failed'));
+                        resolve(new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
+                    }, 'image/jpeg', 0.85);
+                };
+                img.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function uploadInbodyPhoto(file) {
+            if (CONFIG.DEBUG_MODE) {
+                return 'https://via.placeholder.com/200?text=inbody';
+            }
+            try {
+                // 先壓縮
+                const compressed = await compressImage(file, 1600);
+                // 取得 ImageKit 簽名（沿用既有 Edge Function）
+                const authResult = await callEdge('getImageKitAuth');
+                if (!authResult.success) throw new Error(authResult.error || '無法取得上傳簽名');
+
+                const formData = new FormData();
+                formData.append('file', compressed);
+                formData.append('publicKey', authResult.publicKey);
+                formData.append('signature', authResult.signature);
+                formData.append('expire', String(authResult.expire));
+                formData.append('token', authResult.token);
+                const classDate = document.getElementById('classDate').value;
+                // 與 MOTI 3D 系統一致的資料夾結構
+                formData.append('folder', `/inbody/${selectedMember.id}_${selectedMember.name}/${classDate}/`);
+                formData.append('fileName', `${Date.now()}_inbody.jpg`);
+
+                const uploadResponse = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!uploadResponse.ok) {
+                    const errText = await uploadResponse.text();
+                    throw new Error('ImageKit 上傳失敗: ' + errText);
+                }
+                const uploadResult = await uploadResponse.json();
+                return uploadResult.url;
+            } catch (error) {
+                console.error('InBody 照片上傳失敗:', error);
+                showToast('InBody 照片上傳失敗: ' + error.message, 'error');
+                return null;
+            }
+        }
+
         function openLightbox(src) {
             document.getElementById('lightboxImage').src = src;
             document.getElementById('lightbox').classList.add('show');
@@ -3324,7 +3500,18 @@
                 showToast('請填寫需要行政關心的情況', 'error');
                 return false;
             }
-            
+
+            // 檢查 InBody 測量
+            const hasInbodyChecked = document.querySelector('input[name="hasInbody"]:checked');
+            if (!hasInbodyChecked) {
+                showToast('請選擇本堂課是否測量 InBody', 'error');
+                return false;
+            }
+            if (hasInbodyChecked.value === 'yes' && inbodyFiles.length === 0) {
+                showToast('已勾選測量 InBody，請上傳 InBody 報表照片', 'error');
+                return false;
+            }
+
             return true;
         }
         
@@ -3351,6 +3538,7 @@
                 return label ? label.textContent.trim() : cb.value;
             });
             const needFollowup = document.querySelector('input[name="needAdminFollowup"]:checked').value === 'yes';
+            const hasInbody = document.querySelector('input[name="hasInbody"]:checked').value === 'yes';
 
             const rows = [
                 { label: '學員', value: selectedMember.name },
@@ -3361,7 +3549,8 @@
                 { label: '是否遲到', value: isLate ? '⚠️ 是' : '否' },
                 { label: '課間狀態', value: mentalStars || '-' },
                 { label: '課間狀況', value: incidents.join('、') || '-' },
-                { label: '行政關心', value: needFollowup ? '⚠️ 需要' : '不需要' }
+                { label: '行政關心', value: needFollowup ? '⚠️ 需要' : '不需要' },
+                { label: 'InBody 測量', value: hasInbody ? `✅ 有（${inbodyFiles.length} 張照片）` : '否' }
             ];
 
             document.getElementById('confirmInfoList').innerHTML = rows.map(r =>
@@ -3387,7 +3576,7 @@
             submitBtn.textContent = '送出中...';
             
             try {
-                // 上傳照片（如果有）
+                // 上傳課表照片（如果有）
                 if (photoFiles.length > 0) {
                     showToast(`正在上傳照片 0/${photoFiles.length}...`, 'info');
                     for (let i = 0; i < photoFiles.length; i++) {
@@ -3396,7 +3585,20 @@
                         if (url) uploadedPhotoUrls.push(url);
                     }
                 }
-                
+
+                // 上傳 InBody 照片（如果有勾選測量）
+                const hasInbodyChecked = document.querySelector('input[name="hasInbody"]:checked');
+                const hasInbody = hasInbodyChecked && hasInbodyChecked.value === 'yes';
+                if (hasInbody && inbodyFiles.length > 0) {
+                    showToast('正在上傳 InBody 照片...', 'info');
+                    const url = await uploadInbodyPhoto(inbodyFiles[0]);
+                    if (url) {
+                        uploadedInbodyUrl = url;
+                    } else {
+                        throw new Error('InBody 照片上傳失敗');
+                    }
+                }
+
                 // 收集課間狀況
                 const incidents = Array.from(document.querySelectorAll('#incidentGroup input:checked'))
                     .map(cb => cb.value);
@@ -3409,7 +3611,7 @@
                 const focusItemsDisplay = focusItems.map(v => (v === '其他' && focusOtherText) ? ('其他:' + focusOtherText) : v);
                 const trainingFocus = focusItemsDisplay.join('、');
                 const specialNote = document.getElementById('specialNote').value.trim();
-                
+
                 const formData = {
                     action: 'submitClassRecord',
                     coachCode: currentCoach.id,
@@ -3427,7 +3629,10 @@
                     mentalStateRating: mentalStateValue,
                     incidentTypes: incidents.join(','),
                     needAdminFollowup: document.querySelector('input[name="needAdminFollowup"]:checked').value === 'yes',
-                    adminFollowupNotes: document.getElementById('adminFollowupText').value.trim()
+                    adminFollowupNotes: document.getElementById('adminFollowupText').value.trim(),
+                    // InBody 測量欄位
+                    hasInbody: hasInbody,
+                    inbodyPhotoUrl: uploadedInbodyUrl || null
                 };
                 
                 if (CONFIG.DEBUG_MODE) {
@@ -3550,7 +3755,20 @@
             document.querySelectorAll('input[name="needAdminFollowup"]').forEach(r => r.checked = false);
             document.getElementById('adminFollowupNotes').classList.remove('show');
             document.getElementById('adminFollowupText').value = '';
-            
+
+            // 重設 InBody 測量區塊
+            inbodyFiles = [];
+            uploadedInbodyUrl = null;
+            document.querySelectorAll('input[name="hasInbody"]').forEach(r => r.checked = false);
+            var inbodyArea = document.getElementById('inbodyUploadArea');
+            if (inbodyArea) inbodyArea.classList.remove('show');
+            var inbodyPreview = document.getElementById('inbodyPreviewContainer');
+            if (inbodyPreview) inbodyPreview.innerHTML = '';
+            var inbodyUploadEl = document.getElementById('inbodyUpload');
+            if (inbodyUploadEl) inbodyUploadEl.value = '';
+            var inbodyCaptureEl = document.getElementById('inbodyCapture');
+            if (inbodyCaptureEl) inbodyCaptureEl.value = '';
+
             updateRecordChecks();
             
             window.scrollTo({ top: 0, behavior: 'smooth' });
