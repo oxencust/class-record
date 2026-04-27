@@ -1566,20 +1566,29 @@
 
         .sets-container { margin-top: var(--spacing-sm); }
         .set-row {
-            display: grid;
-            grid-template-columns: 56px 1fr 1fr 1fr 32px;
-            gap: var(--spacing-xs);
-            align-items: center;
             padding: var(--spacing-sm);
             background: var(--gray-light);
             border-radius: var(--radius-sm);
             margin-bottom: var(--spacing-xs);
         }
+        .set-row .set-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
         .set-row .set-label {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             color: var(--gray-dark);
-            text-align: center;
+        }
+        .set-row .set-equipment-cell {
+            margin-bottom: var(--spacing-xs);
+        }
+        .set-numeric-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: var(--spacing-xs);
         }
         .set-row .set-input {
             width: 100%;
@@ -1600,11 +1609,8 @@
             color: var(--gray);
             font-size: 16px;
             cursor: pointer;
-            padding: 0;
-        }
-        .equipment-other-input {
-            grid-column: 2;
-            margin-top: var(--spacing-xs);
+            padding: 0 4px;
+            line-height: 1;
         }
 
         .field-stack-label {
@@ -1638,8 +1644,9 @@
         }
 
         @media (max-width: 380px) {
-            .set-row { grid-template-columns: 44px 1fr 1fr 1fr 28px; gap: 2px; }
+            .set-row { padding: 8px; }
             .set-row .set-input { font-size: 12px; padding: 5px 6px; }
+            .set-numeric-row { gap: 4px; }
         }
     </style>
 </head>
@@ -2131,7 +2138,16 @@
             '農夫走路','負重行走','戰繩','跳箱','藥球拋擲','壺鈴擺盪','土耳其起立'
         ];
         // 器材選項
-        const EQUIPMENT_LIST = ['槓鈴','啞鈴','史密斯機','滑輪','機械','TRX','壺鈴','藥球','彈力帶','自身重量','其他'];
+        const EQUIPMENT_LIST = ['槓鈴','啞鈴','史密斯機','滑輪','機械','TRX','壺鈴','藥球','彈力帶','自身重量'];
+
+        // 把器材清單注入 <datalist>，讓 input 可下拉選 + 直接打字
+        function ensureEquipmentDatalist() {
+            if (document.getElementById('equipmentList')) return;
+            const dl = document.createElement('datalist');
+            dl.id = 'equipmentList';
+            dl.innerHTML = EQUIPMENT_LIST.map(e => `<option value="${e}"></option>`).join('');
+            document.body.appendChild(dl);
+        }
 
         // 教練歷史動作清單（呼叫 Edge Function 載入）
         let exerciseHistoryNames = [];
@@ -3203,17 +3219,18 @@
                                 <div class="skeleton-list">
                         `;
                         details.exercises.forEach((ex, i) => {
-                            // 新格式：每組 {equipment, difficulty, reps}；舊格式：每組 {weight, reps}（含 ex.equipment）
+                            // 新格式：每組 {equipment, weight, difficulty, reps}；舊格式：每組 {weight, reps}（含 ex.equipment，無 difficulty）
                             let setsInfo = '';
                             if (Array.isArray(ex.sets)) {
                                 setsInfo = ex.sets.map(s => {
-                                    if (s && s.weight != null && s.difficulty == null) {
+                                    if (s && s.weight != null && s.difficulty == null && !s.equipment) {
                                         return `${s.weight}kg×${s.reps}`;             // 舊格式
                                     }
                                     const eq = s && s.equipment ? s.equipment : '';
+                                    const w = (s && s.weight != null && s.weight !== '' && Number(s.weight) > 0) ? `${s.weight}kg` : '';
                                     const diff = s && s.difficulty != null ? `難${s.difficulty}` : '';
                                     const reps = s && s.reps != null ? `×${s.reps}` : '';
-                                    return [eq, diff, reps].filter(Boolean).join(' ');
+                                    return [eq, w, diff, reps].filter(Boolean).join(' ');
                                 }).join('；');
                             }
                             // ex.equipment 只在舊格式有值；新格式器材在組層
@@ -3537,7 +3554,7 @@
                 // 需要選了學員且至少填了一項內容才暫存
                 const draft = collectDraftData();
                 if (!draft.memberId) return;
-                const hasExerciseContent = Array.isArray(draft.exercises) && draft.exercises.some(ex => (ex.name || '').trim() || (ex.sets || []).some(s => s.equipment || s.difficulty || s.reps));
+                const hasExerciseContent = Array.isArray(draft.exercises) && draft.exercises.some(ex => (ex.name || '').trim() || (ex.sets || []).some(s => s.equipment || (s.weight != null && s.weight !== '' && Number(s.weight) > 0) || s.difficulty || s.reps));
                 const hasRealContent = draft.trainingContent.trim() || draft.mentalStateRating > 0 || draft.isLate || draft.needAdminFollowup || draft.incidentTypes.length > 0 || hasExerciseContent;
                 if (!hasRealContent) return;
                 localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
@@ -3624,20 +3641,12 @@
                         addSet(addSetBtn);
                         const lastRow = setsContainer.lastElementChild;
                         if (!lastRow) return;
-                        const eqSel = lastRow.querySelector('.set-equipment');
+                        const eqIn = lastRow.querySelector('.set-equipment');
+                        const weight = lastRow.querySelector('.set-weight');
                         const diff = lastRow.querySelector('.set-difficulty');
                         const reps = lastRow.querySelector('.set-reps');
-                        if (eqSel) {
-                            // 若 draft 的 equipment 不在預設清單，視為「其他」+自填
-                            if (s.equipment && !EQUIPMENT_LIST.includes(s.equipment)) {
-                                eqSel.value = '其他';
-                                onEquipmentChange(eqSel);
-                                const eqOther = lastRow.querySelector('.set-equipment-other');
-                                if (eqOther) eqOther.value = s.equipment;
-                            } else {
-                                eqSel.value = s.equipment || '';
-                            }
-                        }
+                        if (eqIn) eqIn.value = s.equipment || '';
+                        if (weight) weight.value = (s.weight != null && s.weight !== '' && Number(s.weight) > 0) ? s.weight : '';
                         if (diff) diff.value = s.difficulty != null ? s.difficulty : '';
                         if (reps) reps.value = s.reps != null ? s.reps : '';
                     });
@@ -4171,6 +4180,7 @@
 
         // 在指定動作卡內新增一組
         function addSet(btn) {
+            ensureEquipmentDatalist();
             const card = btn.closest('.exercise-card');
             if (!card) return;
             const container = card.querySelector('.sets-container');
@@ -4180,16 +4190,16 @@
             const isFirst = setIndex === 1;
 
             // 帶入第 1 組的值（若已有）
-            let copyEquipment = '', copyEquipmentOther = '', copyDifficulty = '', copyReps = '';
+            let copyEquipment = '', copyWeight = '', copyDifficulty = '', copyReps = '';
             if (!isFirst) {
                 const firstRow = container.children[0];
                 if (firstRow) {
-                    const eqSel = firstRow.querySelector('.set-equipment');
-                    const eqOther = firstRow.querySelector('.set-equipment-other');
+                    const eqIn = firstRow.querySelector('.set-equipment');
+                    const weight = firstRow.querySelector('.set-weight');
                     const diff = firstRow.querySelector('.set-difficulty');
                     const reps = firstRow.querySelector('.set-reps');
-                    copyEquipment = eqSel ? eqSel.value : '';
-                    copyEquipmentOther = eqOther ? eqOther.value : '';
+                    copyEquipment = eqIn ? eqIn.value : '';
+                    copyWeight = weight ? weight.value : '';
                     copyDifficulty = diff ? diff.value : '';
                     copyReps = reps ? reps.value : '';
                 }
@@ -4197,35 +4207,33 @@
 
             const row = document.createElement('div');
             row.className = 'set-row';
-            const eqOptions = EQUIPMENT_LIST.map(e => `<option value="${e}"${e === copyEquipment ? ' selected' : ''}>${e}</option>`).join('');
+            // 對 attribute 中的雙引號做最低限度跳脫
+            const eqVal = String(copyEquipment).replace(/"/g, '&quot;');
             row.innerHTML = `
-                <div class="set-label">第 <span class="set-num">${setIndex}</span> 組</div>
-                <div>
+                <div class="set-header">
+                    <span class="set-label">第 <span class="set-num">${setIndex}</span> 組</span>
+                    <button type="button" class="remove-set-btn" onclick="removeSet(this)" title="刪除這組">✕</button>
+                </div>
+                <div class="set-equipment-cell">
                     <span class="field-stack-label">器材</span>
-                    <select class="set-input set-equipment" onchange="onEquipmentChange(this)">
-                        <option value="">請選</option>
-                        ${eqOptions}
-                    </select>
+                    <input type="text" list="equipmentList" class="set-input set-equipment" placeholder="選或輸入" value="${eqVal}">
                 </div>
-                <div>
-                    <span class="field-stack-label">難易度 (1-10)</span>
-                    <input type="number" min="1" max="10" step="1" class="set-input set-difficulty" placeholder="1-10" value="${copyDifficulty}">
+                <div class="set-numeric-row">
+                    <div>
+                        <span class="field-stack-label">kg</span>
+                        <input type="number" min="0" step="0.5" class="set-input set-weight" placeholder="0" value="${copyWeight}">
+                    </div>
+                    <div>
+                        <span class="field-stack-label">難度</span>
+                        <input type="number" min="1" max="10" step="1" class="set-input set-difficulty" placeholder="1-10" value="${copyDifficulty}">
+                    </div>
+                    <div>
+                        <span class="field-stack-label">次</span>
+                        <input type="number" min="1" max="999" step="1" class="set-input set-reps" placeholder="次" value="${copyReps}">
+                    </div>
                 </div>
-                <div>
-                    <span class="field-stack-label">次數</span>
-                    <input type="number" min="1" max="999" step="1" class="set-input set-reps" placeholder="次" value="${copyReps}">
-                </div>
-                <button type="button" class="remove-set-btn" onclick="removeSet(this)" title="刪除這組">✕</button>
             `;
             container.appendChild(row);
-
-            // 若器材是「其他」，顯示自填輸入框
-            if (copyEquipment === '其他') {
-                const otherWrap = document.createElement('div');
-                otherWrap.className = 'equipment-other-input';
-                otherWrap.innerHTML = `<input type="text" class="set-input set-equipment-other" placeholder="請輸入器材名稱" value="${copyEquipmentOther}">`;
-                row.appendChild(otherWrap);
-            }
         }
 
         function removeSet(btn) {
@@ -4243,23 +4251,6 @@
                     const numEl = r.querySelector('.set-num');
                     if (numEl) numEl.textContent = String(i + 1);
                 });
-            }
-        }
-
-        // 器材選 / 取消「其他」時，動態顯示 / 隱藏自填欄
-        function onEquipmentChange(selectEl) {
-            const row = selectEl.closest('.set-row');
-            if (!row) return;
-            const existingOther = row.querySelector('.equipment-other-input');
-            if (selectEl.value === '其他') {
-                if (!existingOther) {
-                    const wrap = document.createElement('div');
-                    wrap.className = 'equipment-other-input';
-                    wrap.innerHTML = `<input type="text" class="set-input set-equipment-other" placeholder="請輸入器材名稱">`;
-                    row.appendChild(wrap);
-                }
-            } else if (existingOther) {
-                existingOther.remove();
             }
         }
 
@@ -4332,17 +4323,20 @@
                 const name = nameEl ? nameEl.value.trim() : '';
                 const sets = [];
                 card.querySelectorAll('.set-row').forEach(row => {
-                    const eqSel = row.querySelector('.set-equipment');
-                    const eqOther = row.querySelector('.set-equipment-other');
+                    const eqIn = row.querySelector('.set-equipment');
+                    const weight = row.querySelector('.set-weight');
                     const diff = row.querySelector('.set-difficulty');
                     const reps = row.querySelector('.set-reps');
-                    let equipment = eqSel ? eqSel.value.trim() : '';
-                    if (equipment === '其他') {
-                        equipment = (eqOther ? eqOther.value.trim() : '') || '其他';
+                    const equipment = eqIn ? eqIn.value.trim() : '';
+                    // 重量沒填或非數字 → 預設 0
+                    let weightNum = 0;
+                    if (weight && weight.value !== '') {
+                        const parsed = Number(weight.value);
+                        weightNum = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
                     }
                     const difficultyNum = diff && diff.value !== '' ? Number(diff.value) : null;
                     const repsNum = reps && reps.value !== '' ? Number(reps.value) : null;
-                    sets.push({ equipment, difficulty: difficultyNum, reps: repsNum });
+                    sets.push({ equipment, weight: weightNum, difficulty: difficultyNum, reps: repsNum });
                 });
                 exercises.push({ name, sets });
             });
