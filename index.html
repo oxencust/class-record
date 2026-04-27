@@ -1501,6 +1501,146 @@
             font-size: 24px;
             cursor: pointer;
         }
+
+        /* ===== 重訓結構化紀錄 ===== */
+        .exercise-card {
+            background: var(--white);
+            border: 1px solid #e0e0e0;
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            box-shadow: var(--shadow-sm);
+        }
+        .exercise-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-sm);
+        }
+        .exercise-card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--green-dark);
+        }
+        .remove-exercise-btn {
+            background: none;
+            border: none;
+            color: var(--red);
+            font-size: 13px;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        .exercise-name-wrap {
+            position: relative;
+            margin-bottom: var(--spacing-md);
+        }
+        .exercise-name-wrap .form-input { width: 100%; }
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%; left: 0; right: 0;
+            background: var(--white);
+            border: 1px solid #ddd;
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-md);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+        .autocomplete-dropdown.show { display: block; }
+        .autocomplete-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .autocomplete-item:last-child { border-bottom: none; }
+        .autocomplete-item:hover,
+        .autocomplete-item.active { background: var(--green-light); }
+        .autocomplete-item .src-badge {
+            display: inline-block;
+            font-size: 10px;
+            color: var(--gray);
+            margin-left: 6px;
+        }
+
+        .sets-container { margin-top: var(--spacing-sm); }
+        .set-row {
+            display: grid;
+            grid-template-columns: 56px 1fr 1fr 1fr 32px;
+            gap: var(--spacing-xs);
+            align-items: center;
+            padding: var(--spacing-sm);
+            background: var(--gray-light);
+            border-radius: var(--radius-sm);
+            margin-bottom: var(--spacing-xs);
+        }
+        .set-row .set-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-dark);
+            text-align: center;
+        }
+        .set-row .set-input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            background: var(--white);
+            box-sizing: border-box;
+        }
+        .set-row .set-input:focus {
+            outline: none;
+            border-color: var(--green);
+        }
+        .set-row .remove-set-btn {
+            background: none;
+            border: none;
+            color: var(--gray);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .equipment-other-input {
+            grid-column: 2;
+            margin-top: var(--spacing-xs);
+        }
+
+        .field-stack-label {
+            display: block;
+            font-size: 11px;
+            color: var(--gray);
+            margin-bottom: 2px;
+        }
+
+        .add-set-btn,
+        .add-exercise-btn {
+            width: 100%;
+            padding: 10px;
+            background: var(--white);
+            border: 1px dashed var(--green);
+            border-radius: var(--radius-sm);
+            color: var(--green-dark);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: var(--spacing-sm);
+        }
+        .add-set-btn:hover,
+        .add-exercise-btn:hover {
+            background: var(--green-light);
+        }
+        .add-exercise-btn {
+            border-style: solid;
+            background: var(--green-light);
+            margin-top: var(--spacing-md);
+        }
+
+        @media (max-width: 380px) {
+            .set-row { grid-template-columns: 44px 1fr 1fr 1fr 28px; gap: 2px; }
+            .set-row .set-input { font-size: 12px; padding: 5px 6px; }
+        }
     </style>
 </head>
 <body>
@@ -1747,37 +1887,50 @@
     <input type="text" class="form-input" id="trainingFocusOtherText" placeholder="請說明其他訓練主軸..." style="margin-top: var(--spacing-sm); display: none;">
 </div>
             
-            <div class="record-method-hint">
-                <span>💡</span>
-                <span>請選擇 <strong>拍照上傳</strong> 或 <strong>文字描述</strong>，至少填寫一項</span>
+            <!-- 皮拉提斯 / 伸展 教練看到的區塊（拍照 / 文字） -->
+            <div id="legacyRecordMethods">
+                <div class="record-method-hint">
+                    <span>💡</span>
+                    <span>請選擇 <strong>拍照上傳</strong> 或 <strong>文字描述</strong>，至少填寫一項</span>
+                </div>
+
+                <!-- 方式一：拍照上傳 -->
+                <div class="record-section" id="photoRecordSection">
+                    <div class="record-section-title">
+                        <span class="check" id="photoCheck">✓</span>
+                        <span>方式一：拍照/上傳課表照片</span>
+                    </div>
+                    <div class="photo-preview-container" id="photoPreviewContainer"></div>
+                    <div class="photo-buttons">
+                        <label class="photo-btn upload">
+                            <input type="file" accept="image/*" multiple id="photoUpload" onchange="handlePhotoUpload(event)" style="display: none;">
+                            <span>📁</span> 上傳照片
+                        </label>
+                        <label class="photo-btn camera">
+                            <input type="file" accept="image/*" capture="environment" id="photoCapture" onchange="handlePhotoCapture(event)" style="display: none;">
+                            <span>📸</span> 拍照
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 方式二：文字描述 -->
+                <div class="record-section" id="textRecordSection">
+                    <div class="record-section-title">
+                        <span class="check" id="textCheck">✓</span>
+                        <span>方式二：文字描述訓練內容</span>
+                    </div>
+                    <textarea class="form-textarea" id="trainingContent" placeholder="請輸入本堂課的訓練內容..."></textarea>
+                </div>
             </div>
-            
-            <!-- 方式一：拍照上傳 -->
-            <div class="record-section" id="photoRecordSection">
-                <div class="record-section-title">
-                    <span class="check" id="photoCheck">✓</span>
-                    <span>方式一：拍照/上傳課表照片</span>
+
+            <!-- 重訓教練看到的結構化區塊 -->
+            <div id="exerciseRecordSection" style="display: none;">
+                <div class="record-method-hint">
+                    <span>💪</span>
+                    <span>請依序填入今日的訓練動作；每個動作可包含多組（每組記錄器材、難易度、次數）</span>
                 </div>
-                <div class="photo-preview-container" id="photoPreviewContainer"></div>
-                <div class="photo-buttons">
-                    <label class="photo-btn upload">
-                        <input type="file" accept="image/*" multiple id="photoUpload" onchange="handlePhotoUpload(event)" style="display: none;">
-                        <span>📁</span> 上傳照片
-                    </label>
-                    <label class="photo-btn camera">
-                        <input type="file" accept="image/*" capture="environment" id="photoCapture" onchange="handlePhotoCapture(event)" style="display: none;">
-                        <span>📸</span> 拍照
-                    </label>
-                </div>
-            </div>
-            
-            <!-- 方式二：文字描述 -->
-            <div class="record-section" id="textRecordSection">
-                <div class="record-section-title">
-                    <span class="check" id="textCheck">✓</span>
-                    <span>方式二：文字描述訓練內容</span>
-                </div>
-                <textarea class="form-textarea" id="trainingContent" placeholder="請輸入本堂課的訓練內容..."></textarea>
+                <div id="exercisesContainer"></div>
+                <button type="button" class="add-exercise-btn" onclick="addExercise()">＋ 新增訓練動作</button>
             </div>
 
             <!-- 特殊情況備註 -->
@@ -1952,6 +2105,39 @@
         let uploadedInbodyUrl = null;
         const MAX_INBODY_IMAGES = 1;
 
+        // ============================================
+        // 重訓結構化紀錄相關
+        // ============================================
+        // 起手字典：常見重訓動作（中文）
+        const STRENGTH_EXERCISE_DICT = [
+            // 下肢
+            '深蹲','背蹲舉','前蹲舉','箱式深蹲','保加利亞分腿蹲','分腿蹲','弓步蹲','行走弓步蹲',
+            '硬舉','傳統硬舉','相撲硬舉','羅馬尼亞硬舉','直腿硬舉','單腳硬舉',
+            '腿推舉','哈克深蹲','腿屈伸','腿後勾','坐姿腿後勾','臀推','髖推','滑步機','登階',
+            '小腿提踵','坐姿小腿提踵',
+            // 推（上肢）
+            '臥推','上斜臥推','下斜臥推','啞鈴臥推','啞鈴上斜臥推','地板臥推','窄握臥推',
+            '肩推','站姿肩推','坐姿肩推','啞鈴肩推','阿諾肩推','站姿過頭推','伏地挺身','鑽石伏地挺身',
+            '雙槓撐體','三頭下壓','三頭伸展','法式臂屈伸','過頭三頭伸展',
+            // 拉（上肢）
+            '引體向上','滑輪下拉','坐姿划船','滑輪划船','槓鈴划船','啞鈴單手划船','T 槓划船','面拉',
+            '直立划船','聳肩','二頭彎舉','錘式彎舉','啞鈴彎舉','預備彎舉','槓鈴彎舉','滑輪彎舉',
+            // 核心
+            '平板支撐','側棒','棒式','捲腹','仰臥起坐','俄羅斯轉體','懸吊抬腿','死蟲',
+            '鳥狗式','腹輪','負重轉體',
+            // 肩
+            '側平舉','前平舉','反向飛鳥','啞鈴側平舉','滑輪側平舉','機械飛鳥',
+            // 其他
+            '農夫走路','負重行走','戰繩','跳箱','藥球拋擲','壺鈴擺盪','土耳其起立'
+        ];
+        // 器材選項
+        const EQUIPMENT_LIST = ['槓鈴','啞鈴','史密斯機','滑輪','機械','TRX','壺鈴','藥球','彈力帶','自身重量','其他'];
+
+        // 教練歷史動作清單（呼叫 Edge Function 載入）
+        let exerciseHistoryNames = [];
+        // 動作卡片唯一 ID 計數
+        let exerciseUidCounter = 0;
+
         // 預設今天日期和現在時間
         (function initDateTime() {
             const now = new Date();
@@ -2040,6 +2226,46 @@
             document.querySelectorAll('.class-type-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             selectedClassType = btn.dataset.type;
+            toggleRecordMethodUI();
+        }
+
+        // 依課程類型切換「課表紀錄」區塊：
+        //   strength_training → 顯示結構化動作表，隱藏拍照/文字
+        //   pilates / stretching → 顯示原本拍照/文字（行為與舊版完全相同）
+        function toggleRecordMethodUI() {
+            const isStrength = selectedClassType === 'strength_training';
+            const legacy = document.getElementById('legacyRecordMethods');
+            const exerciseSec = document.getElementById('exerciseRecordSection');
+            if (legacy) legacy.style.display = isStrength ? 'none' : 'block';
+            if (exerciseSec) exerciseSec.style.display = isStrength ? 'block' : 'none';
+
+            if (isStrength) {
+                // 第一次切到重訓且容器是空的 → 自動加一筆動作
+                const container = document.getElementById('exercisesContainer');
+                if (container && container.children.length === 0) {
+                    addExercise();
+                }
+                // 第一次切到重訓 → 載入歷史動作清單（背景，不阻塞）
+                if (exerciseHistoryNames.length === 0) {
+                    loadExerciseHistoryNames();
+                }
+            }
+        }
+
+        // 從 Edge Function 抓全教練的歷史動作名稱（去重 + 排序）
+        async function loadExerciseHistoryNames() {
+            if (CONFIG.DEBUG_MODE) {
+                exerciseHistoryNames = ['練習動作 A','練習動作 B'];
+                return;
+            }
+            try {
+                const result = await callEdge('getRecentExerciseNames', { days: 90 });
+                if (result && result.success && Array.isArray(result.names)) {
+                    exerciseHistoryNames = result.names;
+                }
+            } catch (e) {
+                console.warn('載入歷史動作清單失敗（不影響填寫）:', e.message);
+            }
         }
 
         function setCurrentDate() {
@@ -2977,8 +3203,22 @@
                                 <div class="skeleton-list">
                         `;
                         details.exercises.forEach((ex, i) => {
-                            const setsInfo = ex.sets ? ex.sets.map(s => `${s.weight}kg×${s.reps}`).join(', ') : '';
-                            html += `<div class="skeleton-item"><label>${i+1}. ${ex.name || '-'}</label><span>${ex.equipment || ''} ${setsInfo}</span></div>`;
+                            // 新格式：每組 {equipment, difficulty, reps}；舊格式：每組 {weight, reps}（含 ex.equipment）
+                            let setsInfo = '';
+                            if (Array.isArray(ex.sets)) {
+                                setsInfo = ex.sets.map(s => {
+                                    if (s && s.weight != null && s.difficulty == null) {
+                                        return `${s.weight}kg×${s.reps}`;             // 舊格式
+                                    }
+                                    const eq = s && s.equipment ? s.equipment : '';
+                                    const diff = s && s.difficulty != null ? `難${s.difficulty}` : '';
+                                    const reps = s && s.reps != null ? `×${s.reps}` : '';
+                                    return [eq, diff, reps].filter(Boolean).join(' ');
+                                }).join('；');
+                            }
+                            // ex.equipment 只在舊格式有值；新格式器材在組層
+                            const exEquip = ex.equipment ? `（${ex.equipment}）` : '';
+                            html += `<div class="skeleton-item"><label>${i+1}. ${ex.name || '-'}${exEquip}</label><span>${setsInfo}</span></div>`;
                         });
                         html += `</div></div>`;
                     }
@@ -3269,6 +3509,9 @@
             const followupEl = document.querySelector('input[name="needAdminFollowup"]:checked');
             const incidents = Array.from(document.querySelectorAll('#incidentGroup input:checked')).map(cb => cb.value);
             const focusItems = Array.from(document.querySelectorAll('#trainingFocusGroup input:checked')).map(cb => cb.value);
+            // 重訓結構化資料（皮拉提斯 / 伸展 此處為空陣列，無副作用）
+            let exercises = [];
+            try { if (selectedClassType === 'strength_training') exercises = collectExercises(); } catch (e) {}
             return {
                 savedAt: new Date().toISOString(),
                 memberId: selectedMember ? selectedMember.id : null,
@@ -3277,6 +3520,7 @@
                 classDate: document.getElementById('classDate').value,
                 classTime: document.getElementById('classTime').value,
                 trainingContent: document.getElementById('trainingContent').value,
+                exercises: exercises,
                 isLate: isLateEl ? isLateEl.value : null,
                 mentalStateRating: mentalStateValue,
                 incidentTypes: incidents,
@@ -3293,7 +3537,8 @@
                 // 需要選了學員且至少填了一項內容才暫存
                 const draft = collectDraftData();
                 if (!draft.memberId) return;
-                const hasRealContent = draft.trainingContent.trim() || draft.mentalStateRating > 0 || draft.isLate || draft.needAdminFollowup || draft.incidentTypes.length > 0;
+                const hasExerciseContent = Array.isArray(draft.exercises) && draft.exercises.some(ex => (ex.name || '').trim() || (ex.sets || []).some(s => s.equipment || s.difficulty || s.reps));
+                const hasRealContent = draft.trainingContent.trim() || draft.mentalStateRating > 0 || draft.isLate || draft.needAdminFollowup || draft.incidentTypes.length > 0 || hasExerciseContent;
                 if (!hasRealContent) return;
                 localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
             } catch (e) { /* localStorage 不可用就跳過 */ }
@@ -3360,6 +3605,48 @@
 
             // 恢復訓練內容
             if (draft.trainingContent) document.getElementById('trainingContent').value = draft.trainingContent;
+
+            // 恢復重訓結構化動作
+            if (draft.classType === 'strength_training' && Array.isArray(draft.exercises) && draft.exercises.length > 0) {
+                resetExercises();
+                draft.exercises.forEach(ex => {
+                    addExercise();
+                    const cards = document.querySelectorAll('#exercisesContainer .exercise-card');
+                    const card = cards[cards.length - 1];
+                    if (!card) return;
+                    const nameInput = card.querySelector('.exercise-name-input');
+                    if (nameInput) nameInput.value = ex.name || '';
+                    // 移除 addExercise 預設加的第一組（之後依 draft 補回）
+                    const setsContainer = card.querySelector('.sets-container');
+                    if (setsContainer) setsContainer.innerHTML = '';
+                    const addSetBtn = card.querySelector('.add-set-btn');
+                    (ex.sets || []).forEach(s => {
+                        addSet(addSetBtn);
+                        const lastRow = setsContainer.lastElementChild;
+                        if (!lastRow) return;
+                        const eqSel = lastRow.querySelector('.set-equipment');
+                        const diff = lastRow.querySelector('.set-difficulty');
+                        const reps = lastRow.querySelector('.set-reps');
+                        if (eqSel) {
+                            // 若 draft 的 equipment 不在預設清單，視為「其他」+自填
+                            if (s.equipment && !EQUIPMENT_LIST.includes(s.equipment)) {
+                                eqSel.value = '其他';
+                                onEquipmentChange(eqSel);
+                                const eqOther = lastRow.querySelector('.set-equipment-other');
+                                if (eqOther) eqOther.value = s.equipment;
+                            } else {
+                                eqSel.value = s.equipment || '';
+                            }
+                        }
+                        if (diff) diff.value = s.difficulty != null ? s.difficulty : '';
+                        if (reps) reps.value = s.reps != null ? s.reps : '';
+                    });
+                    // 若 draft 沒有 sets，addExercise 已經幫忙加了 1 組，這邊不用補
+                    if ((ex.sets || []).length === 0 && setsContainer.children.length === 0) {
+                        addSet(addSetBtn);
+                    }
+                });
+            }
 
             // 恢復是否遲到
             if (draft.isLate) {
@@ -3446,12 +3733,48 @@
                 return false;
             }
 
-            const hasPhotos = photoFiles.length > 0;
-            const hasText = document.getElementById('trainingContent').value.trim().length > 0;
-
-            if (!hasPhotos && !hasText) {
-                showToast('請至少填寫照片或文字描述', 'error');
-                return false;
+            // 課表紀錄區塊驗證：依課程類型分流
+            //   重訓 → 結構化動作驗證
+            //   皮拉提斯 / 伸展 → 維持原本「至少照片或文字」邏輯
+            if (selectedClassType === 'strength_training') {
+                const exercises = collectExercises();
+                if (exercises.length === 0) {
+                    showToast('請至少新增一個訓練動作', 'error');
+                    return false;
+                }
+                for (let i = 0; i < exercises.length; i++) {
+                    const ex = exercises[i];
+                    if (!ex.name) {
+                        showToast(`第 ${i + 1} 個動作未填名稱`, 'error');
+                        return false;
+                    }
+                    if (!ex.sets || ex.sets.length === 0) {
+                        showToast(`動作「${ex.name}」至少要 1 組`, 'error');
+                        return false;
+                    }
+                    for (let j = 0; j < ex.sets.length; j++) {
+                        const s = ex.sets[j];
+                        if (!s.equipment) {
+                            showToast(`動作「${ex.name}」第 ${j + 1} 組未選器材`, 'error');
+                            return false;
+                        }
+                        if (!s.difficulty || s.difficulty < 1 || s.difficulty > 10) {
+                            showToast(`動作「${ex.name}」第 ${j + 1} 組難易度需 1-10`, 'error');
+                            return false;
+                        }
+                        if (!s.reps || s.reps < 1) {
+                            showToast(`動作「${ex.name}」第 ${j + 1} 組未填次數`, 'error');
+                            return false;
+                        }
+                    }
+                }
+            } else {
+                const hasPhotos = photoFiles.length > 0;
+                const hasText = document.getElementById('trainingContent').value.trim().length > 0;
+                if (!hasPhotos && !hasText) {
+                    showToast('請至少填寫照片或文字描述', 'error');
+                    return false;
+                }
             }
 
              // 檢查本日訓練主軸（至少勾一項）
@@ -3525,8 +3848,16 @@
             const hasPhotos = photoFiles.length > 0;
             const hasText = document.getElementById('trainingContent').value.trim().length > 0;
             const recordTypes = [];
-            if (hasPhotos) recordTypes.push(`📷 照片 ${photoFiles.length} 張`);
-            if (hasText) recordTypes.push('📝 文字描述');
+            if (selectedClassType === 'strength_training') {
+                const _exercises = collectExercises();
+                const totalSets = _exercises.reduce((sum, ex) => sum + (ex.sets ? ex.sets.length : 0), 0);
+                if (_exercises.length > 0) {
+                    recordTypes.push(`💪 ${_exercises.length} 個動作 / ${totalSets} 組`);
+                }
+            } else {
+                if (hasPhotos) recordTypes.push(`📷 照片 ${photoFiles.length} 張`);
+                if (hasText) recordTypes.push('📝 文字描述');
+            }
 
             // 學員狀況
             const isLate = document.querySelector('input[name="isLate"]:checked').value === 'yes';
@@ -3610,6 +3941,10 @@
                 const trainingFocus = focusItemsDisplay.join('、');
                 const specialNote = document.getElementById('specialNote').value.trim();
 
+                // 重訓走結構化動作；皮拉提斯 / 伸展維持原本拍照 + 文字
+                const isStrengthSubmit = selectedClassType === 'strength_training';
+                const exercisesPayload = isStrengthSubmit ? collectExercises() : null;
+
                 const formData = {
                     action: 'submitClassRecord',
                     coachCode: currentCoach.id,
@@ -3619,8 +3954,11 @@
                     classType: selectedClassType,
                     classDate: document.getElementById('classDate').value,
                     classTime: document.getElementById('classTime').value,
-                    photos: uploadedPhotoUrls.join(','),
-                    trainingContent: document.getElementById('trainingContent').value.trim(),
+                    // 重訓不送 photos / trainingContent
+                    photos: isStrengthSubmit ? '' : uploadedPhotoUrls.join(','),
+                    trainingContent: isStrengthSubmit ? '' : document.getElementById('trainingContent').value.trim(),
+                    // 重訓專屬：結構化動作清單（Edge Function 會 JSON.stringify 寫入 training_details）
+                    exercises: exercisesPayload,
                     trainingFocus: trainingFocus,
                     specialNote: specialNote,
                     isLate: document.querySelector('input[name="isLate"]:checked').value === 'yes',
@@ -3767,11 +4105,256 @@
             var inbodyCaptureEl = document.getElementById('inbodyCapture');
             if (inbodyCaptureEl) inbodyCaptureEl.value = '';
 
+            // 重設重訓結構化動作；若仍是重訓，自動補一筆空動作以便連續填寫
+            resetExercises();
+            if (selectedClassType === 'strength_training') {
+                addExercise();
+            }
+
             updateRecordChecks();
-            
+
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-        
+
+        // ============================================
+        // 重訓結構化紀錄：動作 / 組數 / autocomplete
+        // ============================================
+        // 新增一個訓練動作
+        function addExercise() {
+            const container = document.getElementById('exercisesContainer');
+            if (!container) return;
+            const uid = ++exerciseUidCounter;
+            const card = document.createElement('div');
+            card.className = 'exercise-card';
+            card.dataset.exerciseUid = String(uid);
+            card.innerHTML = `
+                <div class="exercise-card-header">
+                    <div class="exercise-card-title">訓練動作 #<span class="ex-index">${container.children.length + 1}</span></div>
+                    <button type="button" class="remove-exercise-btn" onclick="removeExercise(this)">🗑 刪除動作</button>
+                </div>
+                <div class="exercise-name-wrap">
+                    <input type="text" class="form-input exercise-name-input" placeholder="輸入動作名稱（例如：深蹲）" autocomplete="off"
+                           oninput="onExerciseNameInput(this)" onfocus="onExerciseNameInput(this)" onblur="hideAutocomplete(this)">
+                    <div class="autocomplete-dropdown"></div>
+                </div>
+                <div class="sets-container"></div>
+                <button type="button" class="add-set-btn" onclick="addSet(this)">＋ 新增組（自動帶入第 1 組內容）</button>
+            `;
+            container.appendChild(card);
+            // 預設第一組
+            const addSetBtn = card.querySelector('.add-set-btn');
+            addSet(addSetBtn);
+            // 重新編號
+            renumberExercises();
+        }
+
+        function removeExercise(btn) {
+            const card = btn.closest('.exercise-card');
+            if (!card) return;
+            const container = document.getElementById('exercisesContainer');
+            // 至少保留一個動作（避免容器空了又得手動加）
+            if (container.children.length <= 1) {
+                showToast('至少要有一個訓練動作', 'info');
+                return;
+            }
+            card.remove();
+            renumberExercises();
+        }
+
+        function renumberExercises() {
+            const cards = document.querySelectorAll('#exercisesContainer .exercise-card');
+            cards.forEach((card, idx) => {
+                const idxEl = card.querySelector('.ex-index');
+                if (idxEl) idxEl.textContent = String(idx + 1);
+            });
+        }
+
+        // 在指定動作卡內新增一組
+        function addSet(btn) {
+            const card = btn.closest('.exercise-card');
+            if (!card) return;
+            const container = card.querySelector('.sets-container');
+            if (!container) return;
+
+            const setIndex = container.children.length + 1;
+            const isFirst = setIndex === 1;
+
+            // 帶入第 1 組的值（若已有）
+            let copyEquipment = '', copyEquipmentOther = '', copyDifficulty = '', copyReps = '';
+            if (!isFirst) {
+                const firstRow = container.children[0];
+                if (firstRow) {
+                    const eqSel = firstRow.querySelector('.set-equipment');
+                    const eqOther = firstRow.querySelector('.set-equipment-other');
+                    const diff = firstRow.querySelector('.set-difficulty');
+                    const reps = firstRow.querySelector('.set-reps');
+                    copyEquipment = eqSel ? eqSel.value : '';
+                    copyEquipmentOther = eqOther ? eqOther.value : '';
+                    copyDifficulty = diff ? diff.value : '';
+                    copyReps = reps ? reps.value : '';
+                }
+            }
+
+            const row = document.createElement('div');
+            row.className = 'set-row';
+            const eqOptions = EQUIPMENT_LIST.map(e => `<option value="${e}"${e === copyEquipment ? ' selected' : ''}>${e}</option>`).join('');
+            row.innerHTML = `
+                <div class="set-label">第 <span class="set-num">${setIndex}</span> 組</div>
+                <div>
+                    <span class="field-stack-label">器材</span>
+                    <select class="set-input set-equipment" onchange="onEquipmentChange(this)">
+                        <option value="">請選</option>
+                        ${eqOptions}
+                    </select>
+                </div>
+                <div>
+                    <span class="field-stack-label">難易度 (1-10)</span>
+                    <input type="number" min="1" max="10" step="1" class="set-input set-difficulty" placeholder="1-10" value="${copyDifficulty}">
+                </div>
+                <div>
+                    <span class="field-stack-label">次數</span>
+                    <input type="number" min="1" max="999" step="1" class="set-input set-reps" placeholder="次" value="${copyReps}">
+                </div>
+                <button type="button" class="remove-set-btn" onclick="removeSet(this)" title="刪除這組">✕</button>
+            `;
+            container.appendChild(row);
+
+            // 若器材是「其他」，顯示自填輸入框
+            if (copyEquipment === '其他') {
+                const otherWrap = document.createElement('div');
+                otherWrap.className = 'equipment-other-input';
+                otherWrap.innerHTML = `<input type="text" class="set-input set-equipment-other" placeholder="請輸入器材名稱" value="${copyEquipmentOther}">`;
+                row.appendChild(otherWrap);
+            }
+        }
+
+        function removeSet(btn) {
+            const row = btn.closest('.set-row');
+            if (!row) return;
+            const container = row.parentElement;
+            if (container && container.children.length <= 1) {
+                showToast('每個動作至少要 1 組', 'info');
+                return;
+            }
+            row.remove();
+            // 重新編號
+            if (container) {
+                Array.from(container.children).forEach((r, i) => {
+                    const numEl = r.querySelector('.set-num');
+                    if (numEl) numEl.textContent = String(i + 1);
+                });
+            }
+        }
+
+        // 器材選 / 取消「其他」時，動態顯示 / 隱藏自填欄
+        function onEquipmentChange(selectEl) {
+            const row = selectEl.closest('.set-row');
+            if (!row) return;
+            const existingOther = row.querySelector('.equipment-other-input');
+            if (selectEl.value === '其他') {
+                if (!existingOther) {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'equipment-other-input';
+                    wrap.innerHTML = `<input type="text" class="set-input set-equipment-other" placeholder="請輸入器材名稱">`;
+                    row.appendChild(wrap);
+                }
+            } else if (existingOther) {
+                existingOther.remove();
+            }
+        }
+
+        // 訓練動作名稱 autocomplete
+        function onExerciseNameInput(input) {
+            const wrap = input.closest('.exercise-name-wrap');
+            if (!wrap) return;
+            const dropdown = wrap.querySelector('.autocomplete-dropdown');
+            if (!dropdown) return;
+
+            const q = (input.value || '').trim();
+            // 字典 + 歷史合併（去重）
+            const merged = [];
+            const seen = new Set();
+            STRENGTH_EXERCISE_DICT.forEach(n => { if (!seen.has(n)) { seen.add(n); merged.push({ name: n, src: 'dict' }); } });
+            exerciseHistoryNames.forEach(n => { if (n && !seen.has(n)) { seen.add(n); merged.push({ name: n, src: 'history' }); } });
+
+            let matched = merged;
+            if (q) {
+                const lower = q.toLowerCase();
+                matched = merged.filter(item => item.name.toLowerCase().includes(lower));
+            }
+            matched = matched.slice(0, 12);
+
+            if (matched.length === 0) {
+                dropdown.classList.remove('show');
+                return;
+            }
+            dropdown.innerHTML = matched.map(item =>
+                `<div class="autocomplete-item" onmousedown="event.preventDefault();" onclick="pickAutocomplete(this, '${escapeJs(item.name)}')">${escapeHtml(item.name)}<span class="src-badge">${item.src === 'history' ? '· 曾用過' : ''}</span></div>`
+            ).join('');
+            dropdown.classList.add('show');
+            // 暫存選單對應的 input id 不必要 — 直接靠 closest 找
+            dropdown.dataset.targetActive = '1';
+            dropdown.__targetInput = input;
+        }
+
+        function pickAutocomplete(itemEl, name) {
+            const wrap = itemEl.closest('.exercise-name-wrap');
+            if (!wrap) return;
+            const input = wrap.querySelector('.exercise-name-input');
+            if (input) input.value = name;
+            const dropdown = wrap.querySelector('.autocomplete-dropdown');
+            if (dropdown) dropdown.classList.remove('show');
+        }
+
+        function hideAutocomplete(input) {
+            // blur 時延遲隱藏，避免擋掉 mousedown 在 item 上的點擊
+            setTimeout(() => {
+                const wrap = input.closest('.exercise-name-wrap');
+                if (!wrap) return;
+                const dropdown = wrap.querySelector('.autocomplete-dropdown');
+                if (dropdown) dropdown.classList.remove('show');
+            }, 150);
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, ch => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+        }
+        function escapeJs(s) {
+            return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        }
+
+        // 從 DOM 收集所有結構化訓練動作
+        function collectExercises() {
+            const cards = document.querySelectorAll('#exercisesContainer .exercise-card');
+            const exercises = [];
+            cards.forEach(card => {
+                const nameEl = card.querySelector('.exercise-name-input');
+                const name = nameEl ? nameEl.value.trim() : '';
+                const sets = [];
+                card.querySelectorAll('.set-row').forEach(row => {
+                    const eqSel = row.querySelector('.set-equipment');
+                    const eqOther = row.querySelector('.set-equipment-other');
+                    const diff = row.querySelector('.set-difficulty');
+                    const reps = row.querySelector('.set-reps');
+                    let equipment = eqSel ? eqSel.value.trim() : '';
+                    if (equipment === '其他') {
+                        equipment = (eqOther ? eqOther.value.trim() : '') || '其他';
+                    }
+                    const difficultyNum = diff && diff.value !== '' ? Number(diff.value) : null;
+                    const repsNum = reps && reps.value !== '' ? Number(reps.value) : null;
+                    sets.push({ equipment, difficulty: difficultyNum, reps: repsNum });
+                });
+                exercises.push({ name, sets });
+            });
+            return exercises;
+        }
+
+        // 重設結構化區塊
+        function resetExercises() {
+            const container = document.getElementById('exercisesContainer');
+            if (container) container.innerHTML = '';
+        }
+
         // ============================================
         // 工具函數
         // ============================================
