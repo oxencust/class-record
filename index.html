@@ -493,6 +493,98 @@
         .class-type-btn.active { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
         .class-type-btn:not(.active):hover { border-color: #ccc; }
 
+        /* 教學形式選擇（一對一/二/三）*/
+        .session-format-row {
+            display: flex; gap: 8px; margin-top: var(--spacing-sm);
+        }
+        .session-format-btn {
+            flex: 1; padding: 10px 0; border: 2px solid var(--gray-light);
+            border-radius: var(--radius-sm); background: #fff;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            text-align: center; transition: all 0.2s;
+        }
+        .session-format-btn.active {
+            border-color: var(--blue); background: var(--blue-light); color: var(--blue-dark, #1f6dad);
+        }
+        .session-format-btn:not(.active):hover { border-color: #ccc; }
+
+        /* 額外學員區塊（一對二/三才出現） */
+        .extra-member-slot {
+            margin-top: var(--spacing-md);
+            padding-top: var(--spacing-md);
+            border-top: 1px dashed var(--gray-light);
+        }
+        .extra-member-slot .form-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .extra-member-slot .form-label .slot-remove {
+            font-size: 12px;
+            color: #c0392b;
+            background: transparent;
+            border: 1px solid #f1c1bb;
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .extra-member-slot .form-label .slot-remove:hover {
+            background: #fdecea;
+        }
+
+        /* 學員 tab（modal 內 — 多人時切換看誰的歷史） */
+        .student-tab-bar {
+            display: flex;
+            gap: 6px;
+            padding: 8px 4px;
+            margin-bottom: 8px;
+            border-bottom: 2px solid var(--gray-light);
+            overflow-x: auto;
+        }
+        .student-tab {
+            flex: 0 0 auto;
+            padding: 6px 14px;
+            border: 2px solid var(--gray-light);
+            background: #fff;
+            border-radius: 18px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .student-tab.active {
+            border-color: var(--green);
+            background: var(--green-light);
+            color: var(--green-dark);
+        }
+
+        /* InBody 個別上傳格（多人時） */
+        .inbody-member-slot {
+            border: 1px solid var(--gray-light);
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-sm);
+            margin-top: var(--spacing-sm);
+        }
+        .inbody-member-slot .inbody-member-header {
+            font-weight: 600;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .inbody-member-slot .inbody-status-badge {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: var(--gray-light);
+            color: var(--gray-dark, #555);
+        }
+        .inbody-member-slot .inbody-status-badge.uploaded {
+            background: var(--green-light);
+            color: var(--green-dark);
+        }
+
         /* 課表照片網格 */
         .class-photos-grid {
             display: grid;
@@ -1720,9 +1812,19 @@
                 <div class="card-icon green">👤</div>
                 <div class="card-title">選擇學員</div>
             </div>
-            
+
+            <!-- 教學形式：一對一 / 一對二 / 一對三 -->
             <div class="form-group">
-                <label class="form-label">搜尋學員<span class="required">*</span></label>
+                <label class="form-label">教學形式</label>
+                <div class="session-format-row" id="sessionFormatRow">
+                    <button type="button" class="session-format-btn active" data-format="1-on-1" onclick="selectSessionFormat('1-on-1')">一對一</button>
+                    <button type="button" class="session-format-btn" data-format="1-on-2" onclick="selectSessionFormat('1-on-2')">一對二</button>
+                    <button type="button" class="session-format-btn" data-format="1-on-3" onclick="selectSessionFormat('1-on-3')">一對三</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" id="memberSearchLabel">搜尋學員<span class="required">*</span></label>
                 <div class="search-container">
                     <div class="search-input-wrapper">
                         <span class="search-icon">🔍</span>
@@ -1774,6 +1876,9 @@
                     <span class="moti-arrow">›</span>
                 </button>
             </div>
+
+            <!-- 額外學員容器（一對二/三 時動態生成 slot 2 / slot 3） -->
+            <div id="extraMembersContainer"></div>
         </section>
 
         <!-- MOTI 檢測歷程彈窗 -->
@@ -1786,6 +1891,9 @@
                 <div class="modal-body">
                     <!-- 會員資訊 -->
                     <div class="modal-member-info" id="modalMemberInfo"></div>
+
+                    <!-- 學員 tab（一對二/三 時切換看哪位學員的歷史；一對一隱藏）-->
+                    <div class="student-tab-bar" id="modalStudentTabBar" style="display: none;"></div>
 
                     <!-- 標籤切換 -->
                     <div class="modal-tabs">
@@ -2050,17 +2158,10 @@
                     </div>
                 </div>
                 <div class="conditional-field" id="inbodyUploadArea">
-                    <label class="form-label">InBody 報表照片<span class="required">*</span>（最多 1 張）</label>
-                    <div class="photo-preview-container" id="inbodyPreviewContainer"></div>
-                    <div class="photo-buttons">
-                        <label class="photo-btn upload">
-                            <input type="file" accept="image/*" id="inbodyUpload" onchange="handleInbodyUpload(event)" style="display: none;">
-                            <span>📁</span> 上傳照片
-                        </label>
-                        <label class="photo-btn camera">
-                            <input type="file" accept="image/*" capture="environment" id="inbodyCapture" onchange="handleInbodyUpload(event)" style="display: none;">
-                            <span>📸</span> 拍照
-                        </label>
+                    <label class="form-label">InBody 報表照片（每位學員獨立上傳，可選）</label>
+                    <div id="inbodyMemberSlotsContainer">
+                        <!-- 一對一：渲染 1 格；一對二：渲染 2 格；一對三：渲染 3 格 -->
+                        <!-- 每位學員可獨立決定要不要上傳 -->
                     </div>
                 </div>
             </div>
@@ -2103,14 +2204,38 @@
         // 全域變數
         // ============================================
         let currentCoach = null;
-        let selectedMember = null;
+        let selectedMember = null;        // 主學員（向下相容，等同 selectedMembers[0]）
         let selectedClassType = '';
         let photoFiles = [];
         let uploadedPhotoUrls = [];
-        // InBody 測量相關
+        // InBody 測量相關（單人模式遺留變數，多人模式只用 inbodyByMember）
         let inbodyFiles = [];
         let uploadedInbodyUrl = null;
         const MAX_INBODY_IMAGES = 1;
+
+        // ── 多人課表（一對二/三）狀態 ──
+        let currentSessionFormat = '1-on-1';   // '1-on-1' | '1-on-2' | '1-on-3'
+        let selectedMembers = [];              // [{id, name, gender, birth_date, medical_history, consultation_notes, ...}, ...]
+        let activeMemberSearchSlot = 1;        // 1=主學員、2=第二位、3=第三位（搜尋框點按時哪一格在用）
+        // 每位學員的 InBody 暫存：{ memberId: { file: File|null, url: string|null } }
+        let inbodyByMember = {};
+        let modalCurrentMemberIdx = 0;         // modal 內目前顯示哪位學員的歷史
+        let groupSessionUuid = null;           // 多人課表時的同堂 UUID（送出前生成）
+
+        // 取得目前格式對應的最大學員數
+        function getMaxMembers() {
+            if (currentSessionFormat === '1-on-3') return 3;
+            if (currentSessionFormat === '1-on-2') return 2;
+            return 1;
+        }
+        // 簡單 UUID（前端產生 group_session_id；不嚴格 v4 但夠用）
+        function genUuid() {
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = (Math.random() * 16) | 0, v = c === 'x' ? r : (r & 0x3) | 0x8;
+                return v.toString(16);
+            });
+        }
 
         // ============================================
         // 重訓結構化紀錄相關
@@ -2410,13 +2535,16 @@
                 radio.addEventListener('change', function() {
                     const show = this.value === 'yes';
                     document.getElementById('inbodyUploadArea').classList.toggle('show', show);
-                    // 若切回「否」，清空已選照片
-                    if (!show) {
-                        inbodyFiles = [];
+                    if (show) {
+                        // 渲染每位學員的獨立上傳格
+                        renderInbodyMemberSlots();
+                    } else {
+                        // 切回「否」→ 清空所有學員的 InBody 暫存
+                        inbodyByMember = {};
+                        inbodyFiles = [];           // 舊變數一併清
                         uploadedInbodyUrl = null;
-                        document.getElementById('inbodyPreviewContainer').innerHTML = '';
-                        document.getElementById('inbodyUpload').value = '';
-                        document.getElementById('inbodyCapture').value = '';
+                        const cont = document.getElementById('inbodyMemberSlotsContainer');
+                        if (cont) cont.innerHTML = '';
                     }
                 });
             });
@@ -2442,19 +2570,29 @@
         }
         
         // ============================================
-        // 學員搜尋
+        // 學員搜尋（支援多人 slot 1/2/3）
         // ============================================
-        function doSearch() {
-            const query = document.getElementById('memberSearch').value.trim();
-            if (query) searchMembers(query);
+        // slot 對應的元素 id
+        function searchInputId(slot)   { return slot === 1 ? 'memberSearch'  : `memberSearch${slot}`; }
+        function searchResultsId(slot) { return slot === 1 ? 'searchResults' : `searchResults${slot}`; }
+        function searchClearId(slot)   { return slot === 1 ? 'searchClear'   : `searchClear${slot}`; }
+
+        function doSearch(slot = 1) {
+            activeMemberSearchSlot = slot;
+            const inp = document.getElementById(searchInputId(slot));
+            if (!inp) return;
+            const query = inp.value.trim();
+            if (query) searchMembers(query, slot);
         }
-        
-        async function searchMembers(query) {
-            const searchResults = document.getElementById('searchResults');
-            
+
+        async function searchMembers(query, slot = 1) {
+            activeMemberSearchSlot = slot;
+            const searchResults = document.getElementById(searchResultsId(slot));
+            if (!searchResults) return;
+
             try {
                 let members = [];
-                
+
                 if (CONFIG.DEBUG_MODE) {
                     // Mock 資料
                     const mock = [
@@ -2471,12 +2609,20 @@
                         members = (data.members || []).filter(m => m && m.id && m.name);
                     }
                 }
-                
+
+                // 過濾掉已被其他 slot 選走的學員（多人模式時）
+                const usedIds = new Set(
+                    selectedMembers
+                        .filter((m, i) => m && i !== (slot - 1))
+                        .map(m => m.id)
+                );
+                members = members.filter(m => !usedIds.has(m.id));
+
                 if (members.length === 0) {
                     searchResults.innerHTML = '<div class="search-no-result">找不到符合的學員</div>';
                 } else {
                     searchResults.innerHTML = members.map(m => `
-                        <div class="search-result-item" onclick='selectMember(${JSON.stringify(m).replace(/'/g, "&#39;")})'>
+                        <div class="search-result-item" onclick='selectMember(${JSON.stringify(m).replace(/'/g, "&#39;")}, ${slot})'>
                             <div>
                                 <div class="name">${m.name}</div>
                                 <div class="sub">${m.id}</div>
@@ -2491,98 +2637,357 @@
                 searchResults.classList.add('show');
             }
         }
-        
-        function selectMember(member) {
-            selectedMember = member;
-            
-            document.getElementById('memberSearch').value = '';
-            document.getElementById('searchResults').classList.remove('show');
-            document.getElementById('searchClear').classList.remove('show');
-            
-            document.getElementById('memberIdDisplay').textContent = member.id;
-            document.getElementById('memberName').textContent = member.name;
-            document.getElementById('memberGender').textContent = 
+
+        // 把學員資訊填到指定 slot 的 info card
+        function renderMemberInfoToSlot(member, slot) {
+            const idSuffix = slot === 1 ? '' : String(slot);
+            const card    = document.getElementById('memberInfoCard' + idSuffix);
+            if (!card) return;
+
+            const idDisp  = document.getElementById('memberIdDisplay' + idSuffix);
+            const nameEl  = document.getElementById('memberName'      + idSuffix);
+            const genderEl= document.getElementById('memberGender'    + idSuffix);
+            const bdayEl  = document.getElementById('memberBirthday'  + idSuffix);
+            const ageEl   = document.getElementById('memberAge'       + idSuffix);
+            const diseaseAlert = document.getElementById('memberDiseaseAlert' + idSuffix);
+            const diseaseEl    = document.getElementById('memberDisease'      + idSuffix);
+            const notesInfo    = document.getElementById('memberNotesInfo'    + idSuffix);
+            const notesEl      = document.getElementById('memberNotes'        + idSuffix);
+
+            if (idDisp)  idDisp.textContent  = member.id;
+            if (nameEl)  nameEl.textContent  = member.name;
+            if (genderEl) genderEl.textContent =
                 (member.gender === 'male' || member.gender === '男') ? '男' : '女';
-            document.getElementById('memberBirthday').textContent = member.birth_date || '-';
-            // 自動換算年齡
-            const ageEl = document.getElementById('memberAge');
-            if (member.birth_date) {
-                const birth = new Date(member.birth_date);
-                const today = new Date();
-                let age = today.getFullYear() - birth.getFullYear();
-                const monthDiff = today.getMonth() - birth.getMonth();
-                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age--;
-                ageEl.textContent = `（${age} 歲）`;
-            } else {
-                ageEl.textContent = '';
+            if (bdayEl)  bdayEl.textContent  = member.birth_date || '-';
+
+            if (ageEl) {
+                if (member.birth_date) {
+                    const birth = new Date(member.birth_date);
+                    const today = new Date();
+                    let age = today.getFullYear() - birth.getFullYear();
+                    const monthDiff = today.getMonth() - birth.getMonth();
+                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age--;
+                    ageEl.textContent = `（${age} 歲）`;
+                } else {
+                    ageEl.textContent = '';
+                }
             }
 
-            // 疾病史
-            const diseaseAlert = document.getElementById('memberDiseaseAlert');
-            if (member.medical_history) {
-                document.getElementById('memberDisease').textContent = member.medical_history;
-                diseaseAlert.style.display = 'block';
-            } else {
-                diseaseAlert.style.display = 'none';
+            if (diseaseAlert) {
+                if (member.medical_history) {
+                    if (diseaseEl) diseaseEl.textContent = member.medical_history;
+                    diseaseAlert.style.display = 'block';
+                } else {
+                    diseaseAlert.style.display = 'none';
+                }
             }
 
-            // 諮詢備註
-            const notesInfo = document.getElementById('memberNotesInfo');
-            if (member.consultation_notes && member.consultation_notes.trim()) {
-                document.getElementById('memberNotes').textContent = member.consultation_notes;
-                notesInfo.style.display = 'block';
-            } else {
-                notesInfo.style.display = 'none';
+            if (notesInfo) {
+                if (member.consultation_notes && member.consultation_notes.trim()) {
+                    if (notesEl) notesEl.textContent = member.consultation_notes;
+                    notesInfo.style.display = 'block';
+                } else {
+                    notesInfo.style.display = 'none';
+                }
             }
 
-            document.getElementById('memberInfoCard').classList.add('show');
-
-            // 顯示 MOTI 按鈕
-            document.getElementById('motiHistoryBtn').style.display = 'flex';
-
-            // 清空照片
-            photoFiles = [];
-            uploadedPhotoUrls = [];
-            document.getElementById('photoPreviewContainer').innerHTML = '';
-            updateRecordChecks();
+            card.classList.add('show');
         }
-        
-        function clearMemberSearch() {
-            document.getElementById('memberSearch').value = '';
-            document.getElementById('searchResults').classList.remove('show');
-            document.getElementById('searchClear').classList.remove('show');
+
+        function selectMember(member, slot = 1) {
+            // 防呆：若已存在於其他 slot，拒絕
+            const dupIdx = selectedMembers.findIndex((m, i) => m && m.id === member.id && i !== (slot - 1));
+            if (dupIdx >= 0) {
+                showToast('該學員已在其他位置', 'error');
+                return;
+            }
+
+            // 寫入 selectedMembers（slot 是 1-based，陣列是 0-based）
+            selectedMembers[slot - 1] = member;
+            if (slot === 1) selectedMember = member; // 維持舊變數同步
+
+            // 清空對應 slot 搜尋框
+            const inpEl  = document.getElementById(searchInputId(slot));
+            const rsEl   = document.getElementById(searchResultsId(slot));
+            const clrEl  = document.getElementById(searchClearId(slot));
+            if (inpEl)  inpEl.value = '';
+            if (rsEl)   rsEl.classList.remove('show');
+            if (clrEl)  clrEl.classList.remove('show');
+
+            // 填入該 slot 資訊卡
+            renderMemberInfoToSlot(member, slot);
+
+            if (slot === 1) {
+                // 顯示主 MOTI 按鈕（多人模式時也只用一顆，由 modal tab 切換）
+                const motiBtn = document.getElementById('motiHistoryBtn');
+                if (motiBtn) motiBtn.style.display = 'flex';
+
+                // 主學員首次選擇 → 重設照片
+                photoFiles = [];
+                uploadedPhotoUrls = [];
+                const ppc = document.getElementById('photoPreviewContainer');
+                if (ppc) ppc.innerHTML = '';
+                updateRecordChecks();
+            }
+
+            // 同步 InBody 個別上傳格（若已渲染）
+            if (typeof renderInbodyMemberSlots === 'function') {
+                renderInbodyMemberSlots();
+            }
         }
-        
+
+        function clearMemberSearch(slot = 1) {
+            const inp = document.getElementById(searchInputId(slot));
+            const rs  = document.getElementById(searchResultsId(slot));
+            const clr = document.getElementById(searchClearId(slot));
+            if (inp) inp.value = '';
+            if (rs)  rs.classList.remove('show');
+            if (clr) clr.classList.remove('show');
+        }
+
+        // 清除主學員（slot 1）→ 同時連帶清除 slot 2/3（因為主沒選等於整張表沒意義）
         function clearSelectedMember() {
             selectedMember = null;
+            selectedMembers = [];
             document.getElementById('memberInfoCard').classList.remove('show');
-            document.getElementById('motiHistoryBtn').style.display = 'none';
-            document.getElementById('memberNotesInfo').style.display = 'none';
-            document.getElementById('memberSearch').focus();
+            const motiBtn = document.getElementById('motiHistoryBtn');
+            if (motiBtn) motiBtn.style.display = 'none';
+            const notesInfo = document.getElementById('memberNotesInfo');
+            if (notesInfo) notesInfo.style.display = 'none';
+            // 連帶清除 slot 2/3
+            renderExtraMemberSlots();
+            // 清除 InBody 個別上傳格暫存
+            inbodyByMember = {};
+            if (typeof renderInbodyMemberSlots === 'function') {
+                renderInbodyMemberSlots();
+            }
+            const sInp = document.getElementById('memberSearch');
+            if (sInp) sInp.focus();
+        }
+
+        // 清除非主學員（slot 2 或 3）→ 只清該 slot
+        function clearExtraSlot(slot) {
+            if (slot === 1) return;
+            selectedMembers[slot - 1] = undefined;
+            // 收斂尾端 undefined（不影響 slot 1）
+            while (selectedMembers.length > 0 && selectedMembers[selectedMembers.length - 1] === undefined) {
+                selectedMembers.pop();
+            }
+            // 移除該 slot 的 inbody 暫存
+            // （key 是 memberId，但這裡 member 已經移除，所以下面 renderInbodyMemberSlots 會自動忽略）
+            renderExtraMemberSlots();
+            if (typeof renderInbodyMemberSlots === 'function') {
+                renderInbodyMemberSlots();
+            }
+        }
+
+        // ============================================
+        // 教學形式（一對一/二/三）切換
+        // ============================================
+        function selectSessionFormat(format) {
+            if (!['1-on-1', '1-on-2', '1-on-3'].includes(format)) return;
+            const prevMax = getMaxMembers();
+            currentSessionFormat = format;
+            const newMax = getMaxMembers();
+
+            // 切回更小的格式 → 把多餘 slot 學員清掉
+            if (newMax < prevMax) {
+                for (let i = newMax; i < selectedMembers.length; i++) {
+                    selectedMembers[i] = undefined;
+                }
+                while (selectedMembers.length > 0 && selectedMembers[selectedMembers.length - 1] === undefined) {
+                    selectedMembers.pop();
+                }
+            }
+
+            // 更新按鈕 active 狀態
+            document.querySelectorAll('#sessionFormatRow .session-format-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.format === format);
+            });
+
+            // 更新主搜尋 label
+            const lbl = document.getElementById('memberSearchLabel');
+            if (lbl) {
+                if (format === '1-on-1') {
+                    lbl.innerHTML = '搜尋學員<span class="required">*</span>';
+                } else {
+                    lbl.innerHTML = '搜尋第 1 位學員<span class="required">*</span>';
+                }
+            }
+
+            // 渲染額外 slot
+            renderExtraMemberSlots();
+            // 重新渲染 InBody 個別上傳格
+            if (typeof renderInbodyMemberSlots === 'function') {
+                renderInbodyMemberSlots();
+            }
+        }
+
+        // 動態渲染 slot 2 / slot 3 的搜尋 + 資訊卡
+        function renderExtraMemberSlots() {
+            const container = document.getElementById('extraMembersContainer');
+            if (!container) return;
+            const max = getMaxMembers();
+
+            if (max <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            for (let slot = 2; slot <= max; slot++) {
+                const m = selectedMembers[slot - 1];
+                const idS = String(slot);
+                html += `
+                <div class="extra-member-slot" data-slot="${slot}">
+                    <div class="form-group">
+                        <label class="form-label">搜尋第 ${slot} 位學員<span class="required">*</span></label>
+                        <div class="search-container">
+                            <div class="search-input-wrapper">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" class="search-input" id="memberSearch${idS}" placeholder="輸入學員姓名或編號..." autocomplete="off"
+                                       oninput="onExtraSearchInput(${slot})">
+                                <button type="button" class="search-clear" id="searchClear${idS}" onclick="clearMemberSearch(${slot})">✕</button>
+                                <div class="search-results" id="searchResults${idS}"></div>
+                            </div>
+                            <button type="button" class="search-btn" onclick="doSearch(${slot})">搜尋</button>
+                        </div>
+                    </div>
+
+                    <div class="member-info-card${m ? ' show' : ''}" id="memberInfoCard${idS}">
+                        <div class="member-info-header">
+                            <span class="member-info-title">✓ 第 ${slot} 位學員</span>
+                            <button type="button" class="member-info-clear slot-remove" onclick="clearExtraSlot(${slot})">移除</button>
+                        </div>
+                        <div class="member-info-grid">
+                            <div class="member-info-item"><label>會員編號</label><span id="memberIdDisplay${idS}">-</span></div>
+                            <div class="member-info-item"><label>姓名</label><span id="memberName${idS}">-</span></div>
+                            <div class="member-info-item"><label>性別</label><span id="memberGender${idS}">-</span></div>
+                            <div class="member-info-item"><label>生日</label>
+                                <span id="memberBirthday${idS}">-</span>
+                                <span id="memberAge${idS}" style="font-size:12px; color:#999; margin-left:4px;"></span>
+                            </div>
+                        </div>
+                        <div class="member-disease-alert" id="memberDiseaseAlert${idS}" style="display: none;">
+                            <label>⚠️ 疾病史注意</label>
+                            <span id="memberDisease${idS}">-</span>
+                        </div>
+                        <div class="member-notes-info" id="memberNotesInfo${idS}" style="display: none;">
+                            <label>📝 諮詢備註</label>
+                            <span id="memberNotes${idS}">-</span>
+                        </div>
+                    </div>
+                </div>`;
+            }
+            container.innerHTML = html;
+
+            // 重新填入已存在的學員資訊（重渲染後 DOM 是新的）
+            for (let slot = 2; slot <= max; slot++) {
+                const m = selectedMembers[slot - 1];
+                if (m) renderMemberInfoToSlot(m, slot);
+            }
+        }
+
+        // 額外 slot 搜尋框輸入時 → 顯示 clear 按鈕 + debounce 自動搜尋
+        const _extraSlotSearchTimers = {};
+        function onExtraSearchInput(slot) {
+            const inp = document.getElementById(searchInputId(slot));
+            const rs  = document.getElementById(searchResultsId(slot));
+            const clr = document.getElementById(searchClearId(slot));
+            if (!inp) return;
+            const query = inp.value.trim();
+            if (clr) clr.classList.toggle('show', query.length > 0);
+            clearTimeout(_extraSlotSearchTimers[slot]);
+            if (query.length < 1) {
+                if (rs) rs.classList.remove('show');
+                return;
+            }
+            _extraSlotSearchTimers[slot] = setTimeout(() => searchMembers(query, slot), 300);
         }
 
         // ============================================
         // MOTI/InBody 歷程
         // ============================================
+        // 計算當前 modal 應該看哪位學員（依 modalCurrentMemberIdx）
+        function getModalActiveMember() {
+            const list = selectedMembers.filter(Boolean);
+            if (list.length === 0) return selectedMember || null;
+            const idx = Math.min(Math.max(modalCurrentMemberIdx || 0, 0), list.length - 1);
+            return list[idx];
+        }
+
+        // 渲染 modal 上方的學員 tab bar（一對一隱藏，多人時顯示）
+        function renderModalStudentTabBar() {
+            const bar = document.getElementById('modalStudentTabBar');
+            if (!bar) return;
+            const list = selectedMembers.filter(Boolean);
+            if (list.length <= 1) {
+                bar.style.display = 'none';
+                bar.innerHTML = '';
+                return;
+            }
+            bar.style.display = 'flex';
+            bar.innerHTML = list.map((m, i) => `
+                <button type="button" class="student-tab ${i === modalCurrentMemberIdx ? 'active' : ''}"
+                        onclick="switchModalMember(${i})">
+                    ${m.name}
+                </button>
+            `).join('');
+        }
+
+        // 切換 modal 看哪位學員
+        function switchModalMember(idx) {
+            const list = selectedMembers.filter(Boolean);
+            if (idx < 0 || idx >= list.length) return;
+            modalCurrentMemberIdx = idx;
+            const m = list[idx];
+            if (!m) return;
+
+            // 重新渲染 tab active 狀態
+            renderModalStudentTabBar();
+
+            // 更新 modal 頭部顯示的會員資訊
+            document.getElementById('modalMemberInfo').innerHTML = `
+                <div class="name">${m.name}</div>
+                <div class="id">會員編號：${m.id}</div>
+            `;
+
+            // 重置 class history 載入狀態，因為換人了
+            classHistoryLoaded = false;
+            currentClassFilter = 'all';
+
+            // 切回 MOTI tab 並重新載入該學員資料
+            switchModalTab('moti');
+            loadMotiHistory(m.id);
+            loadInbodyHistory(m.id);
+        }
+
         function openMotiModal() {
-            if (!selectedMember) {
+            // 取出第一位有效學員
+            const list = selectedMembers.filter(Boolean);
+            const firstMember = list[0] || selectedMember;
+            if (!firstMember) {
                 showToast('請先選擇學員', 'error');
                 return;
             }
 
             document.getElementById('motiModal').classList.add('show');
 
+            // 一對二/三 → 顯示 tab bar；一對一 → 隱藏
+            modalCurrentMemberIdx = 0;
+            renderModalStudentTabBar();
+
             document.getElementById('modalMemberInfo').innerHTML = `
-                <div class="name">${selectedMember.name}</div>
-                <div class="id">會員編號：${selectedMember.id}</div>
+                <div class="name">${firstMember.name}</div>
+                <div class="id">會員編號：${firstMember.id}</div>
             `;
 
             classHistoryLoaded = false;
             currentClassFilter = 'all';
             switchModalTab('moti');
 
-            loadMotiHistory(selectedMember.id);
-            loadInbodyHistory(selectedMember.id);
+            loadMotiHistory(firstMember.id);
+            loadInbodyHistory(firstMember.id);
         }
 
         function closeMotiModal() {
@@ -2598,8 +3003,9 @@
             document.getElementById('inbodyTabContent').classList.toggle('active', tab === 'inbody');
             document.getElementById('classHistoryTabContent').classList.toggle('active', tab === 'classHistory');
 
-            if (tab === 'classHistory' && selectedMember && !classHistoryLoaded) {
-                loadClassHistory(selectedMember.id);
+            if (tab === 'classHistory' && !classHistoryLoaded) {
+                const m = getModalActiveMember();
+                if (m) loadClassHistory(m.id);
             }
         }
 
@@ -3389,51 +3795,123 @@
         }
 
         // ============================================
-        // InBody 照片處理
+        // InBody 照片處理（每位學員獨立上傳，可選）
+        // inbodyByMember[memberId] = { file: File|null, dataUrl: string|null, url: string|null }
         // ============================================
-        function handleInbodyUpload(event) {
-            const file = event.target.files[0];
-            if (file) addInbodyFile(file);
-            event.target.value = '';
+        function renderInbodyMemberSlots() {
+            const container = document.getElementById('inbodyMemberSlotsContainer');
+            if (!container) return;
+
+            // 蒐集當前已選學員（依 slot 順序）
+            const members = [];
+            for (let i = 0; i < getMaxMembers(); i++) {
+                if (selectedMembers[i]) members.push({ idx: i, member: selectedMembers[i] });
+            }
+
+            if (members.length === 0) {
+                container.innerHTML = '<div style="color:#999; padding:8px;">請先選擇學員</div>';
+                return;
+            }
+
+            container.innerHTML = members.map(({ idx, member }) => {
+                const m = member;
+                const has = inbodyByMember[m.id] && (inbodyByMember[m.id].file || inbodyByMember[m.id].url);
+                return `
+                <div class="inbody-member-slot" data-member-id="${m.id}">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                        <div>
+                            <strong>${m.name}</strong>
+                            <span style="color:#999; font-size:12px; margin-left:6px;">${m.id}</span>
+                        </div>
+                        <span class="inbody-status-badge ${has ? 'uploaded' : ''}">${has ? '已上傳' : '未上傳'}</span>
+                    </div>
+                    <div class="photo-preview-container" id="inbodyPreviewContainer_${m.id}"></div>
+                    <div class="photo-buttons">
+                        <label class="photo-btn upload">
+                            <input type="file" accept="image/*"
+                                   id="inbodyUpload_${m.id}"
+                                   onchange="handleInbodyUploadFor('${m.id}', event)"
+                                   style="display: none;">
+                            <span>📁</span> 上傳照片
+                        </label>
+                        <label class="photo-btn camera">
+                            <input type="file" accept="image/*" capture="environment"
+                                   id="inbodyCapture_${m.id}"
+                                   onchange="handleInbodyUploadFor('${m.id}', event)"
+                                   style="display: none;">
+                            <span>📸</span> 拍照
+                        </label>
+                    </div>
+                </div>`;
+            }).join('');
+
+            // 重新渲染既有預覽（重渲染後 DOM 是新的）
+            members.forEach(({ member }) => {
+                const slot = inbodyByMember[member.id];
+                if (slot && (slot.file || slot.dataUrl)) {
+                    renderInbodyPreviewFor(member.id);
+                }
+            });
         }
 
-        function addInbodyFile(file) {
+        function handleInbodyUploadFor(memberId, event) {
+            const file = event.target.files[0];
+            event.target.value = '';
+            if (!file) return;
             if (!file.type.startsWith('image/')) {
                 showToast('請選擇圖片檔案', 'error');
                 return;
             }
-            if (inbodyFiles.length >= MAX_INBODY_IMAGES) {
-                showToast(`InBody 照片最多 ${MAX_INBODY_IMAGES} 張，請先刪除現有照片`, 'warning');
-                return;
-            }
-            inbodyFiles.push(file);
-            renderInbodyPreview();
+            // 一位學員只能 1 張，覆蓋舊的
+            inbodyByMember[memberId] = { file, dataUrl: null, url: null };
+
+            // 讀成 dataUrl 暫存（之後送出時上傳；草稿也用得到）
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (!inbodyByMember[memberId]) return;
+                inbodyByMember[memberId].dataUrl = e.target.result;
+                renderInbodyMemberSlots(); // 更新 badge
+            };
+            reader.readAsDataURL(file);
         }
 
-        function removeInbodyFile(index) {
-            inbodyFiles.splice(index, 1);
-            uploadedInbodyUrl = null;
-            renderInbodyPreview();
+        function removeInbodyFor(memberId) {
+            if (inbodyByMember[memberId]) delete inbodyByMember[memberId];
+            renderInbodyMemberSlots();
         }
 
-        function renderInbodyPreview() {
-            const container = document.getElementById('inbodyPreviewContainer');
+        function renderInbodyPreviewFor(memberId) {
+            const container = document.getElementById('inbodyPreviewContainer_' + memberId);
+            if (!container) return;
+            const slot = inbodyByMember[memberId];
             container.innerHTML = '';
-
-            inbodyFiles.forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const div = document.createElement('div');
-                    div.className = 'photo-preview-item';
-                    div.innerHTML = `
-                        <img src="${e.target.result}" alt="InBody 報表" onclick="openLightbox('${e.target.result}')">
-                        <button type="button" class="delete-btn" onclick="removeInbodyFile(${index})">✕</button>
-                    `;
-                    container.appendChild(div);
-                };
-                reader.readAsDataURL(file);
-            });
+            if (!slot) return;
+            const src = slot.dataUrl || slot.url;
+            if (!src) return;
+            const div = document.createElement('div');
+            div.className = 'photo-preview-item';
+            div.innerHTML = `
+                <img src="${src}" alt="InBody 報表" onclick="openLightbox('${src}')">
+                <button type="button" class="delete-btn" onclick="removeInbodyFor('${memberId}')">✕</button>
+            `;
+            container.appendChild(div);
         }
+
+        // ── 舊 API 向後兼容（避免其他地方殘留呼叫導致報錯）──
+        function handleInbodyUpload(event) {
+            // 舊單人模式時走 slot 1（主學員）
+            if (selectedMembers[0]) {
+                handleInbodyUploadFor(selectedMembers[0].id, event);
+            } else if (selectedMember) {
+                handleInbodyUploadFor(selectedMember.id, event);
+            } else {
+                event.target.value = '';
+                showToast('請先選擇學員', 'error');
+            }
+        }
+        function addInbodyFile() { /* deprecated, no-op */ }
+        function removeInbodyFile() { /* deprecated, no-op */ }
+        function renderInbodyPreview() { renderInbodyMemberSlots(); }
 
         // 圖片壓縮（canvas-based，與 MOTI 3D 系統一致）
         async function compressImage(file, maxWidth) {
@@ -3467,9 +3945,14 @@
             });
         }
 
-        async function uploadInbodyPhoto(file) {
+        async function uploadInbodyPhoto(file, memberOverride) {
             if (CONFIG.DEBUG_MODE) {
                 return 'https://via.placeholder.com/200?text=inbody';
+            }
+            const member = memberOverride || selectedMember;
+            if (!member || !member.id) {
+                showToast('找不到學員資訊，無法上傳 InBody', 'error');
+                return null;
             }
             try {
                 // 先壓縮
@@ -3486,7 +3969,7 @@
                 formData.append('token', authResult.token);
                 const classDate = document.getElementById('classDate').value;
                 // 與 MOTI 3D 系統一致的資料夾結構
-                formData.append('folder', `/inbody/${selectedMember.id}_${selectedMember.name}/${classDate}/`);
+                formData.append('folder', `/inbody/${member.id}_${member.name}/${classDate}/`);
                 formData.append('fileName', `${Date.now()}_inbody.jpg`);
 
                 const uploadResponse = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
@@ -3529,10 +4012,35 @@
             // 重訓結構化資料（皮拉提斯 / 伸展 此處為空陣列，無副作用）
             let exercises = [];
             try { if (selectedClassType === 'strength_training') exercises = collectExercises(); } catch (e) {}
+
+            // 多人模式：序列化已選學員（不含敏感欄位）+ 各學員的 InBody dataUrl
+            const filledMembers = selectedMembers.filter(Boolean);
+            const membersDraft = filledMembers.map(m => ({
+                id: m.id, name: m.name, gender: m.gender,
+                birth_date: m.birth_date,
+                medical_history: m.medical_history,
+                consultation_notes: m.consultation_notes
+            }));
+            // InBody 草稿：只存 dataUrl（File 物件無法 JSON 序列化）
+            const inbodyDraft = {};
+            Object.keys(inbodyByMember).forEach(mid => {
+                const slot = inbodyByMember[mid];
+                if (slot && slot.dataUrl) {
+                    inbodyDraft[mid] = { dataUrl: slot.dataUrl, url: slot.url || null };
+                }
+            });
+            const hasInbodyEl = document.querySelector('input[name="hasInbody"]:checked');
+
             return {
                 savedAt: new Date().toISOString(),
-                memberId: selectedMember ? selectedMember.id : null,
-                memberName: selectedMember ? selectedMember.name : null,
+                // 主學員（向後兼容）
+                memberId: selectedMember ? selectedMember.id : (membersDraft[0] ? membersDraft[0].id : null),
+                memberName: selectedMember ? selectedMember.name : (membersDraft[0] ? membersDraft[0].name : null),
+                // 多人課表
+                sessionFormat: currentSessionFormat,
+                members: membersDraft,
+                inbodyByMember: inbodyDraft,
+                hasInbody: hasInbodyEl ? hasInbodyEl.value : null,
                 classType: selectedClassType,
                 classDate: document.getElementById('classDate').value,
                 classTime: document.getElementById('classTime').value,
@@ -3584,7 +4092,14 @@
             if (!draft) return;
             const savedTime = new Date(draft.savedAt);
             const timeStr = savedTime.toLocaleString('zh-TW', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-            const memberInfo = draft.memberName ? `學員：${draft.memberName}` : '';
+            // 多人草稿 → 列出所有學員
+            let memberInfo = '';
+            if (Array.isArray(draft.members) && draft.members.length > 0) {
+                const names = draft.members.map(m => m.name).filter(Boolean).join('、');
+                if (names) memberInfo = `學員：${names}`;
+            } else if (draft.memberName) {
+                memberInfo = `學員：${draft.memberName}`;
+            }
             document.getElementById('draftTime').textContent = `${timeStr}${memberInfo ? ' · ' + memberInfo : ''}`;
             document.getElementById('draftOverlay').classList.add('show');
         }
@@ -3599,15 +4114,70 @@
             const draft = getSavedDraft();
             if (!draft) return;
 
-            // 恢復學員（重新搜尋並選取）
-            if (draft.memberId) {
+            // 恢復教學形式（先設好，後面 selectMember 才會路由到對的 slot）
+            if (draft.sessionFormat && ['1-on-1', '1-on-2', '1-on-3'].includes(draft.sessionFormat)) {
+                selectSessionFormat(draft.sessionFormat);
+            }
+
+            // 恢復學員：優先用 members[]，否則 fallback 用 memberId
+            const draftMembers = (Array.isArray(draft.members) && draft.members.length > 0)
+                ? draft.members
+                : (draft.memberId ? [{ id: draft.memberId, name: draft.memberName }] : []);
+
+            for (let i = 0; i < draftMembers.length; i++) {
+                const dm = draftMembers[i];
+                if (!dm || !dm.id) continue;
                 try {
-                    const result = await callEdge('searchMembers', { query: draft.memberId });
-                    if (result.success && result.data && result.data.length > 0) {
-                        const member = result.data.find(m => String(m.id) === String(draft.memberId));
-                        if (member) selectMember(member);
+                    // 草稿存的學員資料可能不夠新（疾病史、諮詢備註可能改過）→ 重新查 backend
+                    const result = await callEdge('searchMembers', { query: dm.id });
+                    let memberFresh = null;
+                    if (result && result.success && Array.isArray(result.data)) {
+                        memberFresh = result.data.find(m => String(m.id) === String(dm.id));
+                    } else if (result && Array.isArray(result.members)) {
+                        memberFresh = result.members.find(m => String(m.id) === String(dm.id));
                     }
-                } catch (e) { console.log('恢復學員失敗:', e.message); }
+                    // 找不到就用草稿裡存的
+                    selectMember(memberFresh || dm, i + 1);
+                } catch (e) { console.log('恢復學員失敗:', e && e.message); }
+            }
+
+            // 恢復 InBody 上傳暫存（只有 dataUrl，不能還原 File；下次送出會重新上傳 dataUrl 對應的圖檔）
+            if (draft.hasInbody === 'yes') {
+                const inbodyRadio = document.getElementById('hasInbody_yes');
+                if (inbodyRadio) {
+                    inbodyRadio.checked = true;
+                    const area = document.getElementById('inbodyUploadArea');
+                    if (area) area.classList.add('show');
+                }
+                if (draft.inbodyByMember && typeof draft.inbodyByMember === 'object') {
+                    Object.keys(draft.inbodyByMember).forEach(mid => {
+                        const item = draft.inbodyByMember[mid];
+                        if (item && (item.dataUrl || item.url)) {
+                            // 從 dataUrl 還原 File 物件，這樣後續送出可以走原本流程
+                            try {
+                                if (item.dataUrl) {
+                                    const arr = item.dataUrl.split(',');
+                                    const mimeMatch = arr[0].match(/:(.*?);/);
+                                    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+                                    const bstr = atob(arr[1]);
+                                    let n = bstr.length;
+                                    const u8 = new Uint8Array(n);
+                                    while (n--) u8[n] = bstr.charCodeAt(n);
+                                    const file = new File([u8], `${mid}_inbody.jpg`, { type: mime });
+                                    inbodyByMember[mid] = { file, dataUrl: item.dataUrl, url: item.url || null };
+                                } else {
+                                    inbodyByMember[mid] = { file: null, dataUrl: null, url: item.url };
+                                }
+                            } catch (e) {
+                                inbodyByMember[mid] = { file: null, dataUrl: item.dataUrl || null, url: item.url || null };
+                            }
+                        }
+                    });
+                    renderInbodyMemberSlots();
+                }
+            } else if (draft.hasInbody === 'no') {
+                const inbodyRadio = document.getElementById('hasInbody_no');
+                if (inbodyRadio) inbodyRadio.checked = true;
             }
 
             // 恢復課程類型
@@ -3721,8 +4291,22 @@
         // 表單送出
         // ============================================
         function validateForm() {
-            if (!selectedMember) {
+            // 主學員必填
+            if (!selectedMember && (!selectedMembers || !selectedMembers[0])) {
                 showToast('請選擇學員', 'error');
+                return false;
+            }
+            // 多人模式 → 每位 slot 必填
+            const expectedCount = getMaxMembers();
+            const filled = selectedMembers.filter(Boolean);
+            if (filled.length < expectedCount) {
+                if (expectedCount === 2) {
+                    showToast('一對二需選擇 2 位學員', 'error');
+                } else if (expectedCount === 3) {
+                    showToast('一對三需選擇 3 位學員', 'error');
+                } else {
+                    showToast('請選擇學員', 'error');
+                }
                 return false;
             }
 
@@ -3837,9 +4421,16 @@
                 showToast('請選擇本堂課是否測量 InBody', 'error');
                 return false;
             }
-            if (hasInbodyChecked.value === 'yes' && inbodyFiles.length === 0) {
-                showToast('已勾選測量 InBody，請上傳 InBody 報表照片', 'error');
-                return false;
+            // InBody 為「可選擇是哪位」上傳：勾「是」時至少有一位上傳
+            if (hasInbodyChecked.value === 'yes') {
+                const filledList = selectedMembers.filter(Boolean);
+                const anyHasInbody = filledList.some(m =>
+                    inbodyByMember[m.id] && (inbodyByMember[m.id].file || inbodyByMember[m.id].url)
+                );
+                if (!anyHasInbody) {
+                    showToast('已勾選測量 InBody，請至少為一位學員上傳照片', 'error');
+                    return false;
+                }
             }
 
             return true;
@@ -3878,8 +4469,31 @@
             const needFollowup = document.querySelector('input[name="needAdminFollowup"]:checked').value === 'yes';
             const hasInbody = document.querySelector('input[name="hasInbody"]:checked').value === 'yes';
 
+            // 多人模式：列出所有學員姓名
+            const filledMembers = selectedMembers.filter(Boolean);
+            const memberDisplay = filledMembers.length > 0
+                ? filledMembers.map(m => m.name).join('、')
+                : (selectedMember ? selectedMember.name : '-');
+
+            const formatLabel = currentSessionFormat === '1-on-1' ? '一對一'
+                              : currentSessionFormat === '1-on-2' ? '一對二'
+                              : currentSessionFormat === '1-on-3' ? '一對三'
+                              : currentSessionFormat;
+
+            // InBody 上傳統計
+            let inbodyValue = '否';
+            if (hasInbody) {
+                const uploadedNames = filledMembers
+                    .filter(m => inbodyByMember[m.id] && (inbodyByMember[m.id].file || inbodyByMember[m.id].url))
+                    .map(m => m.name);
+                inbodyValue = uploadedNames.length > 0
+                    ? `✅ 有（${uploadedNames.length} 位：${uploadedNames.join('、')}）`
+                    : '✅ 有（無上傳）';
+            }
+
             const rows = [
-                { label: '學員', value: selectedMember.name },
+                { label: '教學形式', value: formatLabel },
+                { label: '學員', value: memberDisplay },
                 { label: '課程類型', value: classTypeNames[selectedClassType] || selectedClassType || '-' },
                 { label: '上課日期', value: document.getElementById('classDate').value },
                 { label: '上課時間', value: document.getElementById('classTime').value },
@@ -3888,7 +4502,7 @@
                 { label: '課間狀態', value: mentalStars || '-' },
                 { label: '課間狀況', value: incidents.join('、') || '-' },
                 { label: '行政關心', value: needFollowup ? '⚠️ 需要' : '不需要' },
-                { label: 'InBody 測量', value: hasInbody ? `✅ 有（${inbodyFiles.length} 張照片）` : '否' }
+                { label: 'InBody 測量', value: inbodyValue }
             ];
 
             document.getElementById('confirmInfoList').innerHTML = rows.map(r =>
@@ -3924,16 +4538,34 @@
                     }
                 }
 
-                // 上傳 InBody 照片（如果有勾選測量）
+                // 上傳 InBody 照片（每位學員獨立，可選；勾選測量時才會上傳）
                 const hasInbodyChecked = document.querySelector('input[name="hasInbody"]:checked');
                 const hasInbody = hasInbodyChecked && hasInbodyChecked.value === 'yes';
-                if (hasInbody && inbodyFiles.length > 0) {
-                    showToast('正在上傳 InBody 照片...', 'info');
-                    const url = await uploadInbodyPhoto(inbodyFiles[0]);
-                    if (url) {
-                        uploadedInbodyUrl = url;
-                    } else {
-                        throw new Error('InBody 照片上傳失敗');
+                const filledMembersForUpload = selectedMembers.filter(Boolean);
+                if (filledMembersForUpload.length === 0 && selectedMember) {
+                    filledMembersForUpload.push(selectedMember);
+                }
+                if (hasInbody) {
+                    let uploadedAny = false;
+                    for (let i = 0; i < filledMembersForUpload.length; i++) {
+                        const m = filledMembersForUpload[i];
+                        const slot = inbodyByMember[m.id];
+                        if (!slot || !slot.file) continue;
+                        showToast(`正在上傳 ${m.name} 的 InBody 照片...`, 'info');
+                        const url = await uploadInbodyPhoto(slot.file, m);
+                        if (!url) {
+                            throw new Error(`${m.name} 的 InBody 照片上傳失敗`);
+                        }
+                        inbodyByMember[m.id].url = url;
+                        // 主學員 url 同步給舊變數，相容後續欄位
+                        if (selectedMember && m.id === selectedMember.id) {
+                            uploadedInbodyUrl = url;
+                        }
+                        uploadedAny = true;
+                    }
+                    // 若有勾選但沒有任何學員上傳 → 視為提示（驗證已擋過，這裡保險）
+                    if (!uploadedAny) {
+                        showToast('未找到 InBody 照片，僅標記為已測量', 'info');
                     }
                 }
 
@@ -3954,12 +4586,47 @@
                 const isStrengthSubmit = selectedClassType === 'strength_training';
                 const exercisesPayload = isStrengthSubmit ? collectExercises() : null;
 
+                // 多人模式：建立 members 陣列（每位學員一筆 row）
+                const filledMembers = selectedMembers.filter(Boolean);
+                const baseMemberList = filledMembers.length > 0
+                    ? filledMembers
+                    : (selectedMember ? [selectedMember] : []);
+
+                // 多人時生成同堂 group_session_id（單人時為 null）
+                if (baseMemberList.length > 1 && !groupSessionUuid) {
+                    groupSessionUuid = genUuid();
+                }
+                const groupId = baseMemberList.length > 1 ? groupSessionUuid : null;
+
+                // participants：所有學員的縮寫 [{id,name}, ...]，每筆 row 都會帶這份共享名單
+                const participants = baseMemberList.map(m => ({ id: m.id, name: m.name }));
+
+                // 每位學員的 inbody url（沒上傳就 null）
+                const membersPayload = baseMemberList.map(m => {
+                    const slot = inbodyByMember[m.id];
+                    const memberInbodyUrl = (slot && slot.url) ? slot.url : null;
+                    return {
+                        memberId: m.id,
+                        memberName: m.name,
+                        // 此筆紀錄這位學員是否真的上傳了 InBody（勾「是」但沒上傳該位的 → false）
+                        hasInbody: !!(hasInbody && memberInbodyUrl),
+                        inbodyPhotoUrl: memberInbodyUrl
+                    };
+                });
+
+                const primaryMember = baseMemberList[0] || selectedMember;
                 const formData = {
                     action: 'submitClassRecord',
                     coachCode: currentCoach.id,
                     coachName: currentCoach.name,
-                    memberId: selectedMember.id,
-                    memberName: selectedMember.name,
+                    // 主學員（向後兼容單人模式 Edge Function fallback 路徑）
+                    memberId: primaryMember ? primaryMember.id : null,
+                    memberName: primaryMember ? primaryMember.name : null,
+                    // 多人模式：完整 members 陣列
+                    members: membersPayload,
+                    sessionFormat: currentSessionFormat,
+                    groupSessionId: groupId,
+                    participants: participants,
                     classType: selectedClassType,
                     classDate: document.getElementById('classDate').value,
                     classTime: document.getElementById('classTime').value,
@@ -3975,15 +4642,15 @@
                     incidentTypes: incidents.join(','),
                     needAdminFollowup: document.querySelector('input[name="needAdminFollowup"]:checked').value === 'yes',
                     adminFollowupNotes: document.getElementById('adminFollowupText').value.trim(),
-                    // InBody 測量欄位
+                    // InBody 測量欄位（向後兼容：沿用主學員的）
                     hasInbody: hasInbody,
-                    inbodyPhotoUrl: uploadedInbodyUrl || null
+                    inbodyPhotoUrl: uploadedInbodyUrl || (membersPayload[0] ? membersPayload[0].inbodyPhotoUrl : null)
                 };
                 
                 if (CONFIG.DEBUG_MODE) {
                     console.log('送出資料:', formData);
                     clearDraft();
-                    showSuccess(formData.memberName);
+                    showSuccess(membersPayload, currentSessionFormat);
                 } else {
                     // Phase 4：改走 Supabase Edge Function（繞過 Make）
                     // 後端 action = submitClassRecord，欄位已在 class-record-api/index.ts 對齊
@@ -3991,7 +4658,7 @@
 
                     if (result && result.success) {
                         clearDraft();
-                        showSuccess(formData.memberName);
+                        showSuccess(membersPayload, currentSessionFormat);
                     } else {
                         throw new Error('送出失敗：' + (result && result.error ? result.error : '未知錯誤'));
                     }
@@ -4044,8 +4711,26 @@
             }
         }
         
-        function showSuccess(memberName) {
-            document.getElementById('successDesc').textContent = `${memberName || '學員'} 的課表紀錄已成功送出`;
+        // 支援多人課表：showSuccess(membersPayload, sessionFormat)
+        // 也向後兼容單字串：showSuccess('學員姓名')
+        function showSuccess(memberInfo, sessionFormat) {
+            let desc = '課表紀錄已成功送出';
+            try {
+                if (typeof memberInfo === 'string') {
+                    desc = `${memberInfo || '學員'} 的課表紀錄已成功送出`;
+                } else if (Array.isArray(memberInfo)) {
+                    const names = memberInfo.map(m => m.memberName || m.name).filter(Boolean);
+                    const fmt = sessionFormat === '1-on-2' ? '一對二'
+                              : sessionFormat === '1-on-3' ? '一對三'
+                              : '一對一';
+                    if (names.length > 1) {
+                        desc = `${fmt}課表紀錄已成功送出（${names.join('、')}）`;
+                    } else if (names.length === 1) {
+                        desc = `${names[0]} 的課表紀錄已成功送出`;
+                    }
+                }
+            } catch (_) { /* fallback to default desc */ }
+            document.getElementById('successDesc').textContent = desc;
             document.getElementById('successOverlay').classList.add('show');
         }
 
@@ -4069,6 +4754,23 @@
 
         function resetForm() {
             selectedMember = null;
+            // 多人課表狀態
+            selectedMembers = [];
+            inbodyByMember = {};
+            groupSessionUuid = null;
+            modalCurrentMemberIdx = 0;
+            activeMemberSearchSlot = 1;
+            // 教學形式重置回 1-on-1
+            currentSessionFormat = '1-on-1';
+            document.querySelectorAll('#sessionFormatRow .session-format-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.format === '1-on-1');
+            });
+            const lbl = document.getElementById('memberSearchLabel');
+            if (lbl) lbl.innerHTML = '搜尋學員<span class="required">*</span>';
+            // 清空額外學員容器
+            const extra = document.getElementById('extraMembersContainer');
+            if (extra) extra.innerHTML = '';
+
             photoFiles = [];
             uploadedPhotoUrls = [];
             mentalStateValue = 0;
@@ -4101,18 +4803,15 @@
             document.getElementById('adminFollowupNotes').classList.remove('show');
             document.getElementById('adminFollowupText').value = '';
 
-            // 重設 InBody 測量區塊
+            // 重設 InBody 測量區塊（多人模式：每位學員獨立上傳格）
             inbodyFiles = [];
             uploadedInbodyUrl = null;
+            inbodyByMember = {};
             document.querySelectorAll('input[name="hasInbody"]').forEach(r => r.checked = false);
             var inbodyArea = document.getElementById('inbodyUploadArea');
             if (inbodyArea) inbodyArea.classList.remove('show');
-            var inbodyPreview = document.getElementById('inbodyPreviewContainer');
-            if (inbodyPreview) inbodyPreview.innerHTML = '';
-            var inbodyUploadEl = document.getElementById('inbodyUpload');
-            if (inbodyUploadEl) inbodyUploadEl.value = '';
-            var inbodyCaptureEl = document.getElementById('inbodyCapture');
-            if (inbodyCaptureEl) inbodyCaptureEl.value = '';
+            var inbodySlotsCont = document.getElementById('inbodyMemberSlotsContainer');
+            if (inbodySlotsCont) inbodySlotsCont.innerHTML = '';
 
             // 重設重訓結構化動作；若仍是重訓，自動補一筆空動作以便連續填寫
             resetExercises();
