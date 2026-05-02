@@ -2459,12 +2459,26 @@
         async function loadCoachInfo(lineUserId) {
             try {
                 const data = await callEdge('getCoachByLineId', { lineUserId });
-                if (data.success) {
+                if (data && data.success && data.coach && data.coach.id) {
                     currentCoach = data.coach;
                     document.getElementById('coachBadge').textContent = currentCoach.name;
+                } else {
+                    // 找不到教練 → 把按鈕鎖住、顯示錯誤
+                    showToast('找不到此 LINE 帳號對應的教練資料，請聯繫管理員', 'error');
+                    const sb = document.getElementById('submitBtn');
+                    if (sb) {
+                        sb.disabled = true;
+                        sb.textContent = '教練資料未載入';
+                    }
                 }
             } catch (error) {
                 console.error('載入教練資訊失敗:', error);
+                showToast('載入教練資訊失敗，請重新整理頁面', 'error');
+                const sb = document.getElementById('submitBtn');
+                if (sb) {
+                    sb.disabled = true;
+                    sb.textContent = '教練資料未載入';
+                }
             }
         }
         
@@ -2691,6 +2705,10 @@
                 }
             }
 
+            // 顯示對應 slot 的 MOTI 按鈕
+            const motiBtn = document.getElementById('motiHistoryBtn' + idSuffix);
+            if (motiBtn) motiBtn.style.display = 'flex';
+
             card.classList.add('show');
         }
 
@@ -2876,6 +2894,16 @@
                             <label>📝 諮詢備註</label>
                             <span id="memberNotes${idS}">-</span>
                         </div>
+
+                        <!-- MOTI / InBody / 課表歷程按鈕（每位學員一顆，點擊後 modal 自動切到該位） -->
+                        <button type="button" class="moti-history-btn"
+                                id="motiHistoryBtn${idS}"
+                                onclick="openMotiModalForSlot(${slot})"
+                                style="${m ? 'display:flex;' : 'display:none;'}">
+                            <span class="moti-icon">📊</span>
+                            <span>查看 MOTI / InBody / 課表歷程</span>
+                            <span class="moti-arrow">›</span>
+                        </button>
                     </div>
                 </div>`;
             }
@@ -2963,31 +2991,51 @@
         }
 
         function openMotiModal() {
-            // 取出第一位有效學員
+            // 主學員按鈕：預設打開第一位
+            openMotiModalAt(0);
+        }
+
+        // slot 是 1-based（與 selectMember 的 slot 對齊）
+        function openMotiModalForSlot(slot) {
             const list = selectedMembers.filter(Boolean);
-            const firstMember = list[0] || selectedMember;
-            if (!firstMember) {
+            // 把 slot（1-based）對應到 list 的索引
+            // 因為 selectedMembers 可能稀疏，filter(Boolean) 後的索引可能改變
+            // 但在正常流程下 slot 1/2/3 都依序填入，filter 後仍然對齊
+            const target = selectedMembers[slot - 1];
+            if (!target) {
+                showToast('該位學員尚未選擇', 'error');
+                return;
+            }
+            const idx = list.findIndex(m => m && m.id === target.id);
+            openMotiModalAt(idx >= 0 ? idx : 0);
+        }
+
+        function openMotiModalAt(memberIdx) {
+            const list = selectedMembers.filter(Boolean);
+            const fallback = selectedMember;
+            const target = list[memberIdx] || list[0] || fallback;
+            if (!target) {
                 showToast('請先選擇學員', 'error');
                 return;
             }
 
             document.getElementById('motiModal').classList.add('show');
 
-            // 一對二/三 → 顯示 tab bar；一對一 → 隱藏
-            modalCurrentMemberIdx = 0;
+            // 多人 → 顯示 tab bar；一對一 → 隱藏
+            modalCurrentMemberIdx = list.length > 0 ? Math.max(0, list.indexOf(target)) : 0;
             renderModalStudentTabBar();
 
             document.getElementById('modalMemberInfo').innerHTML = `
-                <div class="name">${firstMember.name}</div>
-                <div class="id">會員編號：${firstMember.id}</div>
+                <div class="name">${target.name}</div>
+                <div class="id">會員編號：${target.id}</div>
             `;
 
             classHistoryLoaded = false;
             currentClassFilter = 'all';
             switchModalTab('moti');
 
-            loadMotiHistory(firstMember.id);
-            loadInbodyHistory(firstMember.id);
+            loadMotiHistory(target.id);
+            loadInbodyHistory(target.id);
         }
 
         function closeMotiModal() {
@@ -4522,11 +4570,19 @@
         }
 
         async function submitForm() {
-            
+
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
             submitBtn.textContent = '送出中...';
-            
+
+            // 防呆：教練資訊未載入完成（LIFF 還在驗證中或載入失敗）
+            if (!currentCoach || !currentCoach.id) {
+                showToast('教練資訊尚未載入完成，請稍候再送出', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '送出紀錄';
+                return;
+            }
+
             try {
                 // 上傳課表照片（如果有）
                 if (photoFiles.length > 0) {
