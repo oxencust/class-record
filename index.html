@@ -2485,6 +2485,11 @@
                 if (data && data.success && data.coach && data.coach.id) {
                     currentCoach = data.coach;
                     document.getElementById('coachBadge').textContent = currentCoach.name;
+                    // Fix: 自動預選教練的課程類型（與 URL params 路徑一致）
+                    if (currentCoach.classType) {
+                        const btn = document.querySelector(`.class-type-btn[data-type="${currentCoach.classType}"]`);
+                        if (btn) selectClassType(btn);
+                    }
                 } else {
                     // 找不到教練 → 把按鈕鎖住、顯示錯誤
                     showToast('找不到此 LINE 帳號對應的教練資料，請聯繫管理員', 'error');
