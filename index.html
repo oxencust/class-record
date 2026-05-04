@@ -2466,7 +2466,10 @@
                     // 自動帶入教練的課程類型
                     const paramCoachType = urlParams.get('coach_type');
                     if (paramCoachType) {
-                        const btn = document.querySelector(`.class-type-btn[data-type="${paramCoachType}"]`);
+                        // Fix: 把後端 specialty 名稱 (weight/pilates/stretch/ai) 對應到按鈕 data-type
+                        const specMap = { weight: 'strength_training', pilates: 'pilates', stretch: 'stretching', ai: 'ai_analysis', strength_training: 'strength_training', stretching: 'stretching' };
+                        const mapped = specMap[paramCoachType] || paramCoachType;
+                        const btn = document.querySelector(`.class-type-btn[data-type="${mapped}"]`);
                         if (btn) selectClassType(btn);
                     } else {
                         // Fix: URL 沒帶 coach_type → 呼叫 backend 用 coach_id 補取
