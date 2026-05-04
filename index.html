@@ -2208,6 +2208,13 @@
       if (_idToken) sessionStorage.setItem('staffIdToken', _idToken);
     }
     if (!_idToken) _idToken = sessionStorage.getItem('staffIdToken');
+    // Phase 3 hotfix: 過期 token 不送（permissive fallback to lineUid）
+    if (_idToken) {
+      try {
+        const _p = JSON.parse(atob(_idToken.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+        if (_p.exp && _p.exp * 1000 < Date.now()) _idToken = null;
+      } catch(e) { _idToken = null; }
+    }
   } catch(e) {}
   const _body = { action, ...(params || {}) };
   if (_uid && !_body.lineUid) _body.lineUid = _uid;
@@ -2461,6 +2468,18 @@
                     if (paramCoachType) {
                         const btn = document.querySelector(`.class-type-btn[data-type="${paramCoachType}"]`);
                         if (btn) selectClassType(btn);
+                    } else {
+                        // Fix: URL 沒帶 coach_type → 呼叫 backend 用 coach_id 補取
+                        try {
+                            const data = await callEdge('getCoachByLineId', { coach_id: paramCoachId });
+                            if (data?.success && data.coach) {
+                                Object.assign(currentCoach, data.coach);
+                                if (data.coach.classType) {
+                                    const btn = document.querySelector(`.class-type-btn[data-type="${data.coach.classType}"]`);
+                                    if (btn) selectClassType(btn);
+                                }
+                            }
+                        } catch(e) { console.warn('預選課程類型失敗:', e); }
                     }
                     return;
                 }
