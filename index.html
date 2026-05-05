@@ -3196,7 +3196,16 @@
 
         function generateMotiDetailHtml(item) {
             let imageHtml = '';
-            const albumUrl = `https://oxencust.github.io/moti-ai-album/?id=${item.id}&name=${encodeURIComponent(selectedMember ? selectedMember.name : '')}`;
+            // Sprint 1-C: 帶 line_id_edu 給相簿頁，未來相簿 auth lock 後仍可正常存取
+            let _albumUid = '';
+            try {
+              _albumUid = sessionStorage.getItem('staffLineUid')
+                || JSON.parse(sessionStorage.getItem('currentStaff') || 'null')?.line_id_edu
+                || new URLSearchParams(location.search).get('line_id_edu')
+                || new URLSearchParams(location.search).get('uid')
+                || '';
+            } catch(e) {}
+            const albumUrl = `https://oxencust.github.io/moti-ai-album/?id=${item.id}&name=${encodeURIComponent(selectedMember ? selectedMember.name : '')}${_albumUid ? '&line_id_edu=' + encodeURIComponent(_albumUid) : ''}`;
 
             if (item.moti_images) {
                 const images = item.moti_images.split(',').map(url => url.trim()).filter(url => url);
