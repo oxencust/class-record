@@ -4215,6 +4215,19 @@
             try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
         }
 
+        // 送出成功後呼叫：把所有「會自動寫回 draft」的副作用一起停掉，
+        // 避免 setInterval 5 秒間隔 / beforeunload 在 clearDraft() 之後又把草稿寫回 localStorage，
+        // 造成下次打開出現「發現未送出的紀錄」假象。
+        function stopDraftAutoSave() {
+            try {
+                if (draftAutoSaveTimer) {
+                    clearInterval(draftAutoSaveTimer);
+                    draftAutoSaveTimer = null;
+                }
+                window.removeEventListener('beforeunload', saveDraft);
+            } catch (e) { /* 安全失敗：保留 try/catch，避免影響成功流程 */ }
+        }
+
         function getSavedDraft() {
             try {
                 const raw = localStorage.getItem(DRAFT_KEY);
@@ -4800,6 +4813,7 @@
                 if (CONFIG.DEBUG_MODE) {
                     console.log('送出資料:', formData);
                     clearDraft();
+                    stopDraftAutoSave();
                     showSuccess(membersPayload, currentSessionFormat);
                 } else {
                     // Phase 4：改走 Supabase Edge Function（繞過 Make）
@@ -4808,6 +4822,7 @@
 
                     if (result && result.success) {
                         clearDraft();
+                        stopDraftAutoSave();
                         showSuccess(membersPayload, currentSessionFormat);
                     } else {
                         throw new Error('送出失敗：' + (result && result.error ? result.error : '未知錯誤'));
