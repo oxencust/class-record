@@ -3750,13 +3750,39 @@
                 `;
             }
 
-            // 結構化訓練紀錄（舊版用 training_details JSON）
+            // 結構化訓練紀錄（重訓用 JSON object；其他類別歷史資料可能是純文字 string）
+            // 2026-05-12 修正：原本對純文字 JSON.parse 失敗會 silent 不顯示，
+            // 改為 fallback 把字串當純文字顯示在「訓練內容描述」區塊
+            // （新版後端已把純文字改寫入 notes，這段主要救援舊資料）
             if (item.training_details) {
-                let details;
-                try {
-                    details = typeof item.training_details === 'string' ? JSON.parse(item.training_details) : item.training_details;
-                } catch (e) {
-                    details = null;
+                let details = null;
+                let plaintextFallback = null;
+
+                if (typeof item.training_details === 'string') {
+                    try {
+                        const parsed = JSON.parse(item.training_details);
+                        if (parsed && typeof parsed === 'object') {
+                            details = parsed;
+                        } else {
+                            // JSON.parse 成功但結果是純字串/數字 → 當純文字
+                            plaintextFallback = item.training_details;
+                        }
+                    } catch (e) {
+                        // 完全不是合法 JSON → 當純文字
+                        plaintextFallback = item.training_details;
+                    }
+                } else if (typeof item.training_details === 'object') {
+                    details = item.training_details;
+                }
+
+                // 純文字 fallback（避免跟 notes 區塊重複顯示）
+                if (plaintextFallback && plaintextFallback.trim() && !(item.notes && item.notes.trim())) {
+                    html += `
+                        <div class="moti-detail-section">
+                            <div class="moti-detail-title">📝 訓練內容描述</div>
+                            <div class="moti-notes">${plaintextFallback}</div>
+                        </div>
+                    `;
                 }
 
                 if (details) {
