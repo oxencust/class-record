@@ -2183,7 +2183,9 @@
         const CONFIG = {
             LIFF_ID: '2007947083-qVfiwZpQ',
             WEBHOOK_URL: 'https://hook.us2.make.com/r3lqaj3vsva13myaxv4afm95r6r6e6b1',
-            EDGE_FUNCTION_URL: 'https://mnjilhpztnowaplggvkk.supabase.co/functions/v1/class-record-api',
+            // 2026-05-15 Wave5/Step8 R3 cutover Edge → Zeabur (rollback：改回 https://mnjilhpztnowaplggvkk.supabase.co/functions/v1/class-record-api)
+            EDGE_FUNCTION_URL: 'https://class-record-hendia.zeabur.app/',
+            SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1uamlsaHB6dG5vd2FwbGdndmtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3MDA0ODYsImV4cCI6MjA4MTI3NjQ4Nn0.X3e9DF3iT2KUR9ma3_Ins01vG607R155v0xia8hO_Qg',
             DEBUG_MODE: false
         };
 
@@ -2224,7 +2226,7 @@
   const _body = { action, ...(params || {}) };
   if (_uid && !_body.lineUid) _body.lineUid = _uid;
 
-            const _headers = { 'Content-Type': 'application/json' };
+            const _headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON_KEY, 'apikey': CONFIG.SUPABASE_ANON_KEY };
   if (_idToken) _headers['X-Line-IdToken'] = _idToken;
   const res = await fetch(CONFIG.EDGE_FUNCTION_URL, {
     method: 'POST',
@@ -2340,6 +2342,7 @@
         let currentClassFilter = 'all';
 
         // Moti API URL
+        // 2026-05-12 Wave 3 cutover：Edge → Zeabur (moti-hendia)
         const MOTI_API_URL = 'https://moti-hendia.zeabur.app/';
 
         async function callMotiEdge(action, params = {}) {
@@ -2371,7 +2374,7 @@
             } catch(e) {}
             const _body = { action, ...(params || {}) };
             if (_uid && !_body.lineUid) _body.lineUid = _uid;
-            const _headers = { 'Content-Type': 'application/json' };
+            const _headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON_KEY, 'apikey': CONFIG.SUPABASE_ANON_KEY };
             if (_idToken) _headers['X-Line-IdToken'] = _idToken;
             const res = await fetch(MOTI_API_URL, {
                 method: 'POST',
